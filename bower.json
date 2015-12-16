@@ -4,7 +4,7 @@
     "7korobi <7korobi@gmail.com>"
   ],
   "description": "activerecord like in-memory data manager",
-  "version": "0.0.6",
+  "version": "0.0.7",
   "main": "memory-record.js",
   "moduleType": [],
   "license": "MIT",
