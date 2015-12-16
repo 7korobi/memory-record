@@ -1,15 +1,12 @@
-
-/*
-Mem v0.0.3
-http://github.com/7korobi/---
-(c) 7korobi
-License: MIT
- */
+/**
+ memory-record - activerecord like in-memory data manager
+ @version v0.0.4
+ @link https://github.com/7korobi/memory-record
+ @license 
+**/
 
 (function() {
-  var def, type, typeof_str,
-    indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; },
-    slice = [].slice;
+  var def, type, typeof_str;
 
   typeof_str = Object.prototype.toString;
 
@@ -39,9 +36,214 @@ License: MIT
 
   })();
 
-  Mem.Query = (function() {
-    function Query(finder1, filters1, desc1, sort_by1) {
-      this.finder = finder1;
+}).call(this);
+
+(function() {
+  this.Mem.Finder = (function() {
+    function Finder(sort_by) {
+      var all;
+      this.sort_by = sort_by;
+      all = new Mem.Query(this, [], false, this.sort_by);
+      all._memory = {};
+      this.scope = {
+        all: all
+      };
+      this.query = {
+        all: all
+      };
+    }
+
+    Finder.prototype.rehash = function(rules, diff) {
+      var i, len, rule;
+      delete this.query.all._reduce;
+      delete this.query.all._list;
+      delete this.query.all._hash;
+      this.query = {
+        all: this.query.all
+      };
+      for (i = 0, len = rules.length; i < len; i++) {
+        rule = rules[i];
+        rule.rehash(diff);
+      }
+    };
+
+    Finder.prototype.calculate_reduce = function(query) {
+      var base, calc, emits, group, i, id, init, item, j, key, keys, last, len, len1, map, o, reduce, ref, ref1, ref2;
+      init = function(map) {
+        var o;
+        o = {};
+        if (map.count) {
+          o.count = 0;
+        }
+        if (map.all) {
+          o.all = 0;
+        }
+        return o;
+      };
+      reduce = function(item, o, map) {
+        if (!(map.max <= o.max)) {
+          o.max_is = item;
+          o.max = map.max;
+        }
+        if (!(o.min <= map.min)) {
+          o.min_is = item;
+          o.min = map.min;
+        }
+        if (map.count) {
+          o.count += map.count;
+        }
+        if (map.all) {
+          return o.all += map.all;
+        }
+      };
+      calc = function(o) {
+        if (o.all && o.count) {
+          return o.avg = o.all / o.count;
+        }
+      };
+      base = {};
+      ref = query._memory;
+      for (id in ref) {
+        ref1 = ref[id], item = ref1.item, emits = ref1.emits;
+        for (i = 0, len = emits.length; i < len; i++) {
+          ref2 = emits[i], keys = ref2[0], last = ref2[1], map = ref2[2];
+          o = base;
+          for (j = 0, len1 = keys.length; j < len1; j++) {
+            key = keys[j];
+            o = o[key] || (o[key] = {});
+          }
+          o = o[last] || (o[last] = init(map));
+          reduce(item, o, map);
+        }
+      }
+      for (group in base) {
+        emits = base[group];
+        for (key in emits) {
+          map = emits[key];
+          calc(map);
+        }
+      }
+      return query._reduce = base;
+    };
+
+    Finder.prototype.calculate_sort = function(query) {
+      var gt, i, is_array, len, list, lt, o, ref, s;
+      list = query._list;
+      ref = query.desc ? [1, -1] : [-1, 1], lt = ref[0], gt = ref[1];
+      s = query.orders = {};
+      for (i = 0, len = list.length; i < len; i++) {
+        o = list[i];
+        s[o._id] = query.sort_by(o);
+      }
+      if (list.length) {
+        is_array = Array.isArray(query.sort_by(list[0]));
+      }
+      return query._list = is_array ? list.sort(function(a, b) {
+        var a_list, a_val, b_list, b_val, index, j, len1;
+        a_list = s[a._id];
+        b_list = s[b._id];
+        for (index = j = 0, len1 = a_list.length; j < len1; index = ++j) {
+          a_val = a_list[index];
+          b_val = b_list[index];
+          if (a_val < b_val) {
+            return lt;
+          }
+          if (a_val > b_val) {
+            return gt;
+          }
+        }
+        return 0;
+      }) : list.sort(function(a, b) {
+        var a_val, b_val;
+        a_val = s[a._id];
+        b_val = s[b._id];
+        if (a_val < b_val) {
+          return lt;
+        }
+        if (a_val > b_val) {
+          return gt;
+        }
+        return 0;
+      });
+    };
+
+    Finder.prototype.calculate_group = function(query) {
+      var id, o, reduce, ref, target;
+      ref = query._distinct, reduce = ref.reduce, target = ref.target;
+      return query._list = (function() {
+        var ref1, results;
+        ref1 = query._reduce[reduce];
+        results = [];
+        for (id in ref1) {
+          o = ref1[id];
+          results.push(o[target]);
+        }
+        return results;
+      })();
+    };
+
+    Finder.prototype.calculate_list = function(query, all) {
+      var deploy, filters, id, o;
+      if (query._memory === all) {
+        deploy = function(id, o) {
+          return query._hash[id] = o.item;
+        };
+      } else {
+        query._memory = {};
+        deploy = function(id, o) {
+          query._memory[id] = o;
+          return query._hash[id] = o.item;
+        };
+      }
+      query._hash = {};
+      return query._list = (function() {
+        var i, len, ref, results;
+        results = [];
+        for (id in all) {
+          o = all[id];
+          ref = query.filters;
+          for (i = 0, len = ref.length; i < len; i++) {
+            filters = ref[i];
+            if (!filters(o.item)) {
+              o = null;
+            }
+            if (!o) {
+              break;
+            }
+          }
+          if (!o) {
+            continue;
+          }
+          results.push(deploy(id, o));
+        }
+        return results;
+      })();
+    };
+
+    Finder.prototype.calculate = function(query) {
+      this.calculate_list(query, this.query.all._memory);
+      if (query._list.length && (this.map_reduce != null)) {
+        this.calculate_reduce(query);
+        if (query._distinct != null) {
+          this.calculate_group(query);
+        }
+      }
+      this.calculate_sort(query);
+    };
+
+    return Finder;
+
+  })();
+
+}).call(this);
+
+(function() {
+  var indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; },
+    slice = [].slice;
+
+  this.Mem.Query = (function() {
+    function Query(finder, filters1, desc1, sort_by1) {
+      this.finder = finder;
       this.filters = filters1;
       this.desc = desc1;
       this.sort_by = sort_by1;
@@ -295,212 +497,21 @@ License: MIT
 
   })();
 
-  Mem.Finder = (function() {
-    function Finder(sort_by1) {
-      var all;
-      this.sort_by = sort_by1;
-      all = new Mem.Query(this, [], false, this.sort_by);
-      all._memory = {};
-      this.scope = {
-        all: all
-      };
-      this.query = {
-        all: all
-      };
-    }
+}).call(this);
 
-    Finder.prototype.rehash = function(rules, diff) {
-      var i, len, rule;
-      delete this.query.all._reduce;
-      delete this.query.all._list;
-      delete this.query.all._hash;
-      this.query = {
-        all: this.query.all
-      };
-      for (i = 0, len = rules.length; i < len; i++) {
-        rule = rules[i];
-        rule.rehash(diff);
-      }
-    };
+(function() {
+  var slice = [].slice;
 
-    Finder.prototype.calculate_reduce = function(query) {
-      var base, calc, emits, group, i, id, init, item, j, key, keys, last, len, len1, map, o, reduce, ref, ref1, ref2;
-      init = function(map) {
-        var o;
-        o = {};
-        if (map.count) {
-          o.count = 0;
-        }
-        if (map.all) {
-          o.all = 0;
-        }
-        return o;
-      };
-      reduce = function(item, o, map) {
-        if (!(map.max <= o.max)) {
-          o.max_is = item;
-          o.max = map.max;
-        }
-        if (!(o.min <= map.min)) {
-          o.min_is = item;
-          o.min = map.min;
-        }
-        if (map.count) {
-          o.count += map.count;
-        }
-        if (map.all) {
-          return o.all += map.all;
-        }
-      };
-      calc = function(o) {
-        if (o.all && o.count) {
-          return o.avg = o.all / o.count;
-        }
-      };
-      base = {};
-      ref = query._memory;
-      for (id in ref) {
-        ref1 = ref[id], item = ref1.item, emits = ref1.emits;
-        for (i = 0, len = emits.length; i < len; i++) {
-          ref2 = emits[i], keys = ref2[0], last = ref2[1], map = ref2[2];
-          o = base;
-          for (j = 0, len1 = keys.length; j < len1; j++) {
-            key = keys[j];
-            o = o[key] || (o[key] = {});
-          }
-          o = o[last] || (o[last] = init(map));
-          reduce(item, o, map);
-        }
-      }
-      for (group in base) {
-        emits = base[group];
-        for (key in emits) {
-          map = emits[key];
-          calc(map);
-        }
-      }
-      return query._reduce = base;
-    };
-
-    Finder.prototype.calculate_sort = function(query) {
-      var gt, i, is_array, len, list, lt, o, ref, s;
-      list = query._list;
-      ref = query.desc ? [1, -1] : [-1, 1], lt = ref[0], gt = ref[1];
-      s = query.orders = {};
-      for (i = 0, len = list.length; i < len; i++) {
-        o = list[i];
-        s[o._id] = query.sort_by(o);
-      }
-      if (list.length) {
-        is_array = Array.isArray(query.sort_by(list[0]));
-      }
-      return query._list = is_array ? list.sort(function(a, b) {
-        var a_list, a_val, b_list, b_val, index, j, len1;
-        a_list = s[a._id];
-        b_list = s[b._id];
-        for (index = j = 0, len1 = a_list.length; j < len1; index = ++j) {
-          a_val = a_list[index];
-          b_val = b_list[index];
-          if (a_val < b_val) {
-            return lt;
-          }
-          if (a_val > b_val) {
-            return gt;
-          }
-        }
-        return 0;
-      }) : list.sort(function(a, b) {
-        var a_val, b_val;
-        a_val = s[a._id];
-        b_val = s[b._id];
-        if (a_val < b_val) {
-          return lt;
-        }
-        if (a_val > b_val) {
-          return gt;
-        }
-        return 0;
-      });
-    };
-
-    Finder.prototype.calculate_group = function(query) {
-      var id, o, reduce, ref, target;
-      ref = query._distinct, reduce = ref.reduce, target = ref.target;
-      return query._list = (function() {
-        var ref1, results;
-        ref1 = query._reduce[reduce];
-        results = [];
-        for (id in ref1) {
-          o = ref1[id];
-          results.push(o[target]);
-        }
-        return results;
-      })();
-    };
-
-    Finder.prototype.calculate_list = function(query, all) {
-      var deploy, filters, id, o;
-      if (query._memory === all) {
-        deploy = function(id, o) {
-          return query._hash[id] = o.item;
-        };
-      } else {
-        query._memory = {};
-        deploy = function(id, o) {
-          query._memory[id] = o;
-          return query._hash[id] = o.item;
-        };
-      }
-      query._hash = {};
-      return query._list = (function() {
-        var i, len, ref, results;
-        results = [];
-        for (id in all) {
-          o = all[id];
-          ref = query.filters;
-          for (i = 0, len = ref.length; i < len; i++) {
-            filters = ref[i];
-            if (!filters(o.item)) {
-              o = null;
-            }
-            if (!o) {
-              break;
-            }
-          }
-          if (!o) {
-            continue;
-          }
-          results.push(deploy(id, o));
-        }
-        return results;
-      })();
-    };
-
-    Finder.prototype.calculate = function(query) {
-      this.calculate_list(query, this.query.all._memory);
-      if (query._list.length && (this.map_reduce != null)) {
-        this.calculate_reduce(query);
-        if (query._distinct != null) {
-          this.calculate_group(query);
-        }
-      }
-      this.calculate_sort(query);
-    };
-
-    return Finder;
-
-  })();
-
-  Mem.Rule = (function() {
+  this.Mem.Rule = (function() {
     Rule.responses = {};
 
     function Rule(field) {
-      var base1;
+      var base;
       this.id = field + "_id";
       this.list_name = field + "s";
       this.base_obj = {};
       this.validates = [];
-      this.responses = (base1 = Mem.Rule.responses)[field] != null ? base1[field] : base1[field] = [];
+      this.responses = (base = Mem.Rule.responses)[field] != null ? base[field] : base[field] = [];
       this.map_reduce = function() {};
       this.protect = function() {};
       this.deploy = (function(_this) {
@@ -527,9 +538,9 @@ License: MIT
         switch (type(query_call)) {
           case "Function":
             return finder.query.all[key] = function() {
-              var args, base1, name;
+              var args, base, name;
               args = 1 <= arguments.length ? slice.call(arguments, 0) : [];
-              return (base1 = finder.query)[name = key + ":" + (JSON.stringify(args))] != null ? base1[name] : base1[name] = query_call.apply(null, args);
+              return (base = finder.query)[name = key + ":" + (JSON.stringify(args))] != null ? base[name] : base[name] = query_call.apply(null, args);
             };
           default:
             return finder.query.all[key] = query_call;
@@ -563,9 +574,9 @@ License: MIT
         })(this),
         depend_on: (function(_this) {
           return function(parent) {
-            var base1;
-            if ((base1 = Mem.Rule.responses)[parent] == null) {
-              base1[parent] = [];
+            var base;
+            if ((base = Mem.Rule.responses)[parent] == null) {
+              base[parent] = [];
             }
             return Mem.Rule.responses[parent].push(_this);
           };
@@ -634,8 +645,8 @@ License: MIT
           };
         })(this),
         deploy: (function(_this) {
-          return function(deploy1) {
-            _this.deploy = deploy1;
+          return function(deploy) {
+            _this.deploy = deploy;
           };
         })(this),
         map_reduce: (function(_this) {

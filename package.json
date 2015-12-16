@@ -1,12 +1,25 @@
 {
   "name": "memory-record",
   "description": "activerecord like in-memory data manager",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "author": "7korobi <7korobi@gmail.com>",
-  "repository": {"type": "git", "url": "https://github.com/7korobi/memory-record"},
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/7korobi/memory-record"
+  },
   "main": "memory-record.js",
-  "licenses": [{"type": "MIT", "url": "http://opensource.org/licenses/MIT"}],
+  "licenses": [
+    {
+      "type": "MIT",
+      "url": "http://opensource.org/licenses/MIT"
+    }
+  ],
   "files": [
     "memory-record.js"
-  ]
+  ],
+  "dependencies": {
+    "gulp-coffee": "^2.3.1",
+    "gulp-concat": "^2.6.0",
+    "gulp-header": "^1.7.1"
+  }
 }
