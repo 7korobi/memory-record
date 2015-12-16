@@ -1,32 +1,11 @@
 /**
  memory-record - activerecord like in-memory data manager
- @version v0.0.4
+ @version v0.0.6
  @link https://github.com/7korobi/memory-record
  @license 
 **/
 
 (function() {
-  var def, type, typeof_str;
-
-  typeof_str = Object.prototype.toString;
-
-  type = function(o) {
-    return typeof_str.call(o).slice(8, -1);
-  };
-
-  def = function(obj, key, arg) {
-    var configurable, enumerable, get, set;
-    get = arg.get, set = arg.set;
-    configurable = false;
-    enumerable = false;
-    Object.defineProperty(obj, key, {
-      configurable: configurable,
-      enumerable: enumerable,
-      get: get,
-      set: set
-    });
-  };
-
   this.Mem = (function() {
     function Mem() {}
 
@@ -238,8 +217,28 @@
 }).call(this);
 
 (function() {
-  var indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; },
+  var def, type, typeof_str,
+    indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; },
     slice = [].slice;
+
+  typeof_str = Object.prototype.toString;
+
+  type = function(o) {
+    return typeof_str.call(o).slice(8, -1);
+  };
+
+  def = function(obj, key, arg) {
+    var configurable, enumerable, get, set;
+    get = arg.get, set = arg.set;
+    configurable = false;
+    enumerable = false;
+    Object.defineProperty(obj, key, {
+      configurable: configurable,
+      enumerable: enumerable,
+      get: get,
+      set: set
+    });
+  };
 
   this.Mem.Query = (function() {
     function Query(finder, filters1, desc1, sort_by1) {
@@ -500,7 +499,27 @@
 }).call(this);
 
 (function() {
-  var slice = [].slice;
+  var def, type, typeof_str,
+    slice = [].slice;
+
+  typeof_str = Object.prototype.toString;
+
+  type = function(o) {
+    return typeof_str.call(o).slice(8, -1);
+  };
+
+  def = function(obj, key, arg) {
+    var configurable, enumerable, get, set;
+    get = arg.get, set = arg.set;
+    configurable = false;
+    enumerable = false;
+    Object.defineProperty(obj, key, {
+      configurable: configurable,
+      enumerable: enumerable,
+      get: get,
+      set: set
+    });
+  };
 
   this.Mem.Rule = (function() {
     Rule.responses = {};
