@@ -13,10 +13,10 @@ banner = """
 
 """
 
-gulp.task "default", ["browser:sync"], ->
-  gulp.watch "src/*.coffee", ["make"]
+gulp.task "default", ->
+  gulp.watch "{src,test}/*.coffee", ["mocha"]
   gulp.start [
-    "make"
+    "mocha"
   ]
 
 gulp.task "make", ->
@@ -26,3 +26,11 @@ gulp.task "make", ->
   .pipe $.concat "memory-record.js"
   .pipe $.header banner, {pkg}
   .pipe gulp.dest "."
+  .pipe $.uglify preserveComments: 'license'
+  .pipe $.concat "memory-record.min.js"
+  .pipe gulp.dest "."
+
+gulp.task 'mocha', ["make"], ->
+  gulp
+  .src "test/*.coffee", read: false
+  .pipe $.mocha reporter: "list" # "nyan"

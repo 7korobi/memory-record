@@ -1,6 +1,6 @@
 /**
  memory-record - activerecord like in-memory data manager
- @version v0.0.7
+ @version v0.0.8
  @link https://github.com/7korobi/memory-record
  @license 
 **/
