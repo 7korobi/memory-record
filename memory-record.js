@@ -1,24 +1,25 @@
 /**
  memory-record - activerecord like in-memory data manager
- @version v0.0.8
+ @version v0.0.10
  @link https://github.com/7korobi/memory-record
  @license 
 **/
 
 (function() {
-  this.Mem = (function() {
-    function Mem() {}
+  var Mem;
 
-    Mem.rule = {};
-
-    return Mem;
-
-  })();
+  module.exports = Mem = {
+    rule: {}
+  };
 
 }).call(this);
 
 (function() {
-  this.Mem.Finder = (function() {
+  var Mem;
+
+  Mem = module.exports;
+
+  Mem.Finder = (function() {
     function Finder(sort_by) {
       var all;
       this.sort_by = sort_by;
@@ -217,7 +218,7 @@
 }).call(this);
 
 (function() {
-  var def, type, typeof_str,
+  var Mem, def, type, typeof_str,
     indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; },
     slice = [].slice;
 
@@ -240,7 +241,9 @@
     });
   };
 
-  this.Mem.Query = (function() {
+  Mem = module.exports;
+
+  Mem.Query = (function() {
     function Query(finder, filters1, desc1, sort_by1) {
       this.finder = finder;
       this.filters = filters1;
@@ -499,7 +502,7 @@
 }).call(this);
 
 (function() {
-  var def, type, typeof_str,
+  var Mem, def, type, typeof_str,
     slice = [].slice;
 
   typeof_str = Object.prototype.toString;
@@ -521,7 +524,9 @@
     });
   };
 
-  this.Mem.Rule = (function() {
+  Mem = module.exports;
+
+  Mem.Rule = (function() {
     Rule.responses = {};
 
     function Rule(field) {

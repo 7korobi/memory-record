@@ -1,4 +1,5 @@
-class @Mem.Finder
+Mem = module.exports
+class Mem.Finder
   constructor: (@sort_by)->
     all = new Mem.Query @, [], false, @sort_by
     all._memory = {}

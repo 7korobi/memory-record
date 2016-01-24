@@ -1,3 +1,3 @@
 
-class @Mem
-  @rule = {}
+module.exports = Mem =
+  rule: {}

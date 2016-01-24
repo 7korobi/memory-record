@@ -9,7 +9,8 @@ def = (obj, key, {get, set})->
   return
 
 
-class @Mem.Query
+Mem = module.exports
+class Mem.Query
   constructor: (@finder, @filters, @desc, @sort_by)->
 
   _filters: (query, cb)->

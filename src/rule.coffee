@@ -8,8 +8,8 @@ def = (obj, key, {get, set})->
   Object.defineProperty obj, key, {configurable, enumerable, get, set}
   return
 
-
-class @Mem.Rule
+Mem = module.exports
+class Mem.Rule
   @responses = {}
 
   constructor: (field)->
