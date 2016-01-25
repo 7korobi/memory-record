@@ -1,12 +1,4 @@
-chai = require 'chai'
-sinon = require 'sinon'
-expect = chai.expect
-
-chai.use require 'sinon-chai'
-
-Mem = require("../memory-record.js")
-
-console.log Mem
+Mem = require("../memory-record.min.js")
 
 describe "Mem", ()->
   it "set", ->
