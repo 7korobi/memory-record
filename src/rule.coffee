@@ -1,6 +1,5 @@
-typeof_str = Object.prototype.toString
 type = (o)->
-  typeof_str.call(o)[8..-2]
+  o?.constructor
 
 def = (obj, key, {get, set})->
   configurable = false
@@ -11,6 +10,34 @@ def = (obj, key, {get, set})->
 Mem = module.exports
 class Mem.Rule
   @responses = {}
+
+  f_set = (list, parent)->
+    @finder.diff = {}
+    for key, val of @finder.query.all._memory
+      @finder.query.all._memory = {}
+      @finder.diff.del = true
+      break
+    @set_base "merge", list, parent
+
+  f_merge = (list, parent)->
+    @finder.diff = {}
+    @set_base "merge", list, parent
+
+  f_remove = (list)->
+    @finder.diff = {}
+    @set_base false, list, null
+
+
+  set:   f_set
+  reset: f_set
+
+  add:    f_merge
+  merge:  f_merge
+  create: f_merge
+
+  reject: f_remove
+  remove: f_remove
+
 
   constructor: (field)->
     @id = "#{field}_id"
@@ -32,7 +59,7 @@ class Mem.Rule
   schema: (cb)->
     cache_scope = (key, finder, query_call)->
       switch type query_call
-        when "Function"
+        when Function
           finder.query.all[key] = (args...)->
             finder.query["#{key}:#{JSON.stringify args}"] ?= query_call args...
         else
@@ -98,6 +125,15 @@ class Mem.Rule
 
 
   set_base: (mode, from, parent)->
+    switch type from
+      when Array
+        from
+      when Object
+        from = [from]
+      else
+        throw Error 'invalid data : #{from}'
+
+
     finder = @finder
     diff = finder.diff
     all = finder.query.all._memory
@@ -114,11 +150,11 @@ class Mem.Rule
 
     each = (process)->
       switch type from
-        when "Array"
+        when Array
           for item in from || []
             continue unless item
             process(item)
-        when "Object"
+        when Object
           for id, item of from || {}
             continue unless item
             item._id = id
@@ -159,19 +195,3 @@ class Mem.Rule
 
     @rehash(diff)
     return
-
-  set: (list, parent)->
-    @finder.diff = {}
-    for key, val of @finder.query.all._memory
-      @finder.query.all._memory = {}
-      @finder.diff.del = true
-      break
-    @set_base "merge", list, parent
-
-  reject: (list)->
-    @finder.diff = {}
-    @set_base false, list, null
-
-  merge: (list, parent)->
-    @finder.diff = {}
-    @set_base "merge", list, parent

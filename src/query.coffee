@@ -1,6 +1,5 @@
-typeof_str = Object.prototype.toString
 type = (o)->
-  typeof_str.call(o)[8..-2]
+  o?.constructor
 
 def = (obj, key, {get, set})->
   configurable = false
@@ -17,10 +16,10 @@ class Mem.Query
     return @ unless query
     filters = @filters.concat()
     switch type query
-      when "Object"
+      when Object
         for target, req of query
           filters.push cb target, req
-      when "Function"
+      when Function
         filters.push cb null, query
       else
         console.log [type query, query]
@@ -30,17 +29,17 @@ class Mem.Query
   in: (query)->
     @_filters query, (target, req)->
       switch type req
-        when "Array"
+        when Array
           (o)->
             for key in req
               return true if key in o[target]
             false
-        when "RegExp"
+        when RegExp
           (o)->
             for val in o[target]
               return true if req.test val
             false
-        when "Null", "Boolean", "String", "Number"
+        when null, Boolean, String, Number
           (o)->
             req in o[target]
         else
@@ -55,14 +54,14 @@ class Mem.Query
   where: (query)->
     @_filters query, (target, req)->
       switch type req
-        when "Array"
+        when Array
           (o)->
             o[target] in req
-        when "RegExp"
+        when RegExp
           (o)-> req.test o[target]
-        when "Function"
+        when Function
           req
-        when "Null", "Boolean", "String", "Number"
+        when null, Boolean, String, Number
           (o)-> o[target] == req
         else
           console.log [type req, req]
@@ -82,9 +81,9 @@ class Mem.Query
   sort: (desc, order = @sort_by)->
     sort_by =
       switch type order
-        when "Function"
+        when Function
           order
-        when "String", "Number"
+        when String, Number
           (o)-> o[order]
         else
           console.log [type req, req]

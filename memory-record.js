@@ -1,6 +1,6 @@
 /**
  memory-record - activerecord like in-memory data manager
- @version v0.0.10
+ @version v0.0.12
  @link https://github.com/7korobi/memory-record
  @license 
 **/
@@ -219,14 +219,12 @@
 }).call(this);
 
 (function() {
-  var Mem, def, type, typeof_str,
+  var Mem, def, type,
     indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; },
     slice = [].slice;
 
-  typeof_str = Object.prototype.toString;
-
   type = function(o) {
-    return typeof_str.call(o).slice(8, -1);
+    return o != null ? o.constructor : void 0;
   };
 
   def = function(obj, key, arg) {
@@ -259,13 +257,13 @@
       }
       filters = this.filters.concat();
       switch (type(query)) {
-        case "Object":
+        case Object:
           for (target in query) {
             req = query[target];
             filters.push(cb(target, req));
           }
           break;
-        case "Function":
+        case Function:
           filters.push(cb(null, query));
           break;
         default:
@@ -278,7 +276,7 @@
     Query.prototype["in"] = function(query) {
       return this._filters(query, function(target, req) {
         switch (type(req)) {
-          case "Array":
+          case Array:
             return function(o) {
               var i, key, len;
               for (i = 0, len = req.length; i < len; i++) {
@@ -289,7 +287,7 @@
               }
               return false;
             };
-          case "RegExp":
+          case RegExp:
             return function(o) {
               var i, len, ref, val;
               ref = o[target];
@@ -301,10 +299,10 @@
               }
               return false;
             };
-          case "Null":
-          case "Boolean":
-          case "String":
-          case "Number":
+          case null:
+          case Boolean:
+          case String:
+          case Number:
             return function(o) {
               return indexOf.call(o[target], req) >= 0;
             };
@@ -328,21 +326,21 @@
     Query.prototype.where = function(query) {
       return this._filters(query, function(target, req) {
         switch (type(req)) {
-          case "Array":
+          case Array:
             return function(o) {
               var ref;
               return ref = o[target], indexOf.call(req, ref) >= 0;
             };
-          case "RegExp":
+          case RegExp:
             return function(o) {
               return req.test(o[target]);
             };
-          case "Function":
+          case Function:
             return req;
-          case "Null":
-          case "Boolean":
-          case "String":
-          case "Number":
+          case null:
+          case Boolean:
+          case String:
+          case Number:
             return function(o) {
               return o[target] === req;
             };
@@ -388,10 +386,10 @@
       }
       sort_by = (function() {
         switch (type(order)) {
-          case "Function":
+          case Function:
             return order;
-          case "String":
-          case "Number":
+          case String:
+          case Number:
             return function(o) {
               return o[order];
             };
@@ -503,13 +501,11 @@
 }).call(this);
 
 (function() {
-  var Mem, def, type, typeof_str,
+  var Mem, def, type,
     slice = [].slice;
 
-  typeof_str = Object.prototype.toString;
-
   type = function(o) {
-    return typeof_str.call(o).slice(8, -1);
+    return o != null ? o.constructor : void 0;
   };
 
   def = function(obj, key, arg) {
@@ -528,7 +524,46 @@
   Mem = module.exports;
 
   Mem.Rule = (function() {
+    var f_merge, f_remove, f_set;
+
     Rule.responses = {};
+
+    f_set = function(list, parent) {
+      var key, ref, val;
+      this.finder.diff = {};
+      ref = this.finder.query.all._memory;
+      for (key in ref) {
+        val = ref[key];
+        this.finder.query.all._memory = {};
+        this.finder.diff.del = true;
+        break;
+      }
+      return this.set_base("merge", list, parent);
+    };
+
+    f_merge = function(list, parent) {
+      this.finder.diff = {};
+      return this.set_base("merge", list, parent);
+    };
+
+    f_remove = function(list) {
+      this.finder.diff = {};
+      return this.set_base(false, list, null);
+    };
+
+    Rule.prototype.set = f_set;
+
+    Rule.prototype.reset = f_set;
+
+    Rule.prototype.add = f_merge;
+
+    Rule.prototype.merge = f_merge;
+
+    Rule.prototype.create = f_merge;
+
+    Rule.prototype.reject = f_remove;
+
+    Rule.prototype.remove = f_remove;
 
     function Rule(field) {
       var base;
@@ -561,7 +596,7 @@
       var cache_scope, definer;
       cache_scope = function(key, finder, query_call) {
         switch (type(query_call)) {
-          case "Function":
+          case Function:
             return finder.query.all[key] = function() {
               var args, base, name;
               args = 1 <= arguments.length ? slice.call(arguments, 0) : [];
@@ -689,6 +724,16 @@
 
     Rule.prototype.set_base = function(mode, from, parent) {
       var all, deployer, diff, each, finder, validate_item;
+      switch (type(from)) {
+        case Array:
+          from;
+          break;
+        case Object:
+          from = [from];
+          break;
+        default:
+          throw Error('invalid data : #{from}');
+      }
       finder = this.finder;
       diff = finder.diff;
       all = finder.query.all._memory;
@@ -714,7 +759,7 @@
       each = function(process) {
         var i, id, item, len, ref, ref1;
         switch (type(from)) {
-          case "Array":
+          case Array:
             ref = from || [];
             for (i = 0, len = ref.length; i < len; i++) {
               item = ref[i];
@@ -724,7 +769,7 @@
               process(item);
             }
             break;
-          case "Object":
+          case Object:
             ref1 = from || {};
             for (id in ref1) {
               item = ref1[id];
@@ -784,29 +829,6 @@
           })(this));
       }
       this.rehash(diff);
-    };
-
-    Rule.prototype.set = function(list, parent) {
-      var key, ref, val;
-      this.finder.diff = {};
-      ref = this.finder.query.all._memory;
-      for (key in ref) {
-        val = ref[key];
-        this.finder.query.all._memory = {};
-        this.finder.diff.del = true;
-        break;
-      }
-      return this.set_base("merge", list, parent);
-    };
-
-    Rule.prototype.reject = function(list) {
-      this.finder.diff = {};
-      return this.set_base(false, list, null);
-    };
-
-    Rule.prototype.merge = function(list, parent) {
-      this.finder.diff = {};
-      return this.set_base("merge", list, parent);
     };
 
     return Rule;
