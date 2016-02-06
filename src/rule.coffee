@@ -27,16 +27,25 @@ class Mem.Rule
     @finder.diff = {}
     @set_base false, list, null
 
+  f_item = (cb)->
+    (item, parent)->
+      switch type item
+        when Object
+          cb.bind(@) [item], parent
+        else
+          throw Error 'invalid data : #{item}'
 
   set:   f_set
   reset: f_set
 
-  add:    f_merge
   merge:  f_merge
-  create: f_merge
 
   reject: f_remove
-  remove: f_remove
+
+  add:    f_item f_merge
+  create: f_item f_merge
+  remove: f_item f_remove
+
 
 
   constructor: (field)->
@@ -125,15 +134,6 @@ class Mem.Rule
 
 
   set_base: (mode, from, parent)->
-    switch type from
-      when Array
-        from
-      when Object
-        from = [from]
-      else
-        throw Error 'invalid data : #{from}'
-
-
     finder = @finder
     diff = finder.diff
     all = finder.query.all._memory

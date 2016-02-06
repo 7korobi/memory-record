@@ -12,7 +12,7 @@ describe "Mem", ()->
       data:
         msg: "Bye World!"
     ]
-    Mem.rule.test.merge
+    Mem.rule.test.add
       _id: "news"
       data:
         msg: "Merge World!"

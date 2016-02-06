@@ -1,6 +1,6 @@
 /**
  memory-record - activerecord like in-memory data manager
- @version v0.0.12
+ @version v0.0.13
  @link https://github.com/7korobi/memory-record
  @license 
 **/
@@ -524,7 +524,7 @@
   Mem = module.exports;
 
   Mem.Rule = (function() {
-    var f_merge, f_remove, f_set;
+    var f_item, f_merge, f_remove, f_set;
 
     Rule.responses = {};
 
@@ -551,19 +551,30 @@
       return this.set_base(false, list, null);
     };
 
+    f_item = function(cb) {
+      return function(item, parent) {
+        switch (type(item)) {
+          case Object:
+            return cb.bind(this)([item], parent);
+          default:
+            throw Error('invalid data : #{item}');
+        }
+      };
+    };
+
     Rule.prototype.set = f_set;
 
     Rule.prototype.reset = f_set;
 
-    Rule.prototype.add = f_merge;
-
     Rule.prototype.merge = f_merge;
-
-    Rule.prototype.create = f_merge;
 
     Rule.prototype.reject = f_remove;
 
-    Rule.prototype.remove = f_remove;
+    Rule.prototype.add = f_item(f_merge);
+
+    Rule.prototype.create = f_item(f_merge);
+
+    Rule.prototype.remove = f_item(f_remove);
 
     function Rule(field) {
       var base;
@@ -724,16 +735,6 @@
 
     Rule.prototype.set_base = function(mode, from, parent) {
       var all, deployer, diff, each, finder, validate_item;
-      switch (type(from)) {
-        case Array:
-          from;
-          break;
-        case Object:
-          from = [from];
-          break;
-        default:
-          throw Error('invalid data : #{from}');
-      }
       finder = this.finder;
       diff = finder.diff;
       all = finder.query.all._memory;
