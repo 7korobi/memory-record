@@ -1,3 +1,5 @@
-
 module.exports = Mem =
-  rule: {}
+  Sync: {}
+  Query: {}
+  Collection: {}
+

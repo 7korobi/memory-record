@@ -17,14 +17,36 @@ class Mem.Finder
       rule.rehash diff
     return
 
+  save: (query)->
+    return unless @sync
+    try
+      for _id in @sync.load_index() when ! query.hash[_id]
+        @sync.delete _id
+
+      for _id, o of query.hash
+        @sync.store _id, o
+
+      @sync.store_index Object.keys query.hash
+
+      true
+    catch { message }
+      console.log message
+      false
+
   calculate_reduce: (query)->
     init = (map)->
       o = {}
       o.count = 0 if map.count
       o.all   = 0 if map.all
+      o.push = [] if map.push
+      o.set  = {} if map.set
       o
 
     reduce = (item, o, map)->
+      if map.push
+        o.push.push map.push
+      if map.set
+        o.set[map.set] = true
       unless map.max <= o.max
         o.max_is = item
         o.max = map.max

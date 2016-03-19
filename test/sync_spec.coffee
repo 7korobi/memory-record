@@ -1,11 +1,9 @@
-{Collection, Query, Rule} = require("../memory-record.min.js")
+{Collection, Query, Rule, Sync} = require("../memory-record.min.js")
 
 describe "Collection", ()->
   it "set", ->
     new Rule("test").schema ->
-      @scope (all)->
-        topA: all.where(key: /^A/)
-        in_key: (key)-> all.in {key}
+      @sync Sync.test
 
     Collection.test.set [
       _id: 10
@@ -37,8 +35,15 @@ describe "Collection", ()->
     expect( Query.tests.ids ).to.have.members ["10", "20", "news", "newnews"]
 
 describe "Query", ()->
-  it "scope call", ->
-    expect( Query.tests.topA.ids ).to.have.members ["10", "news"]
+  it "save A", ->
+    Query.tests.in(list: "A").save()
+    expect( Query.tests.finder.sync.load_index() ).to.have.members ["10", "20", "news"]
 
-  it "scope with argument", ->
-    expect( Query.tests.in_key("A").ids ).to.have.members ["10", "20", "news"]
+  it "save C", ->
+    Query.tests.in(list: "C").save()
+    expect( Query.tests.finder.sync.load_index() ).to.have.members ["newnews"]
+
+describe "Collection", ()->
+  it "fetch", ->
+    expect( Collection.test.fetch() ).to.eq true
+    expect( Query.tests.ids ).to.have.members ["newnews"]

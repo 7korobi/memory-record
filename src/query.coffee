@@ -1,11 +1,18 @@
 type = (o)->
   o?.constructor
 
-def = (obj, key, {get, set})->
+def = (obj, key, { get, set })->
   configurable = false
   enumerable = false
-  Object.defineProperty obj, key, {configurable, enumerable, get, set}
+  Object.defineProperty obj, key, { configurable, enumerable, get, set }
   return
+
+set_for = (list)->
+  set = {}
+  for key in list
+    set[key] = true
+  set
+
 
 
 Mem = module.exports
@@ -24,15 +31,16 @@ class Mem.Query
       else
         console.log [type query, query]
         throw Error 'unimplemented'
-    new Mem.Query @finder, filters, @desc, @sort_by
+    new Query @finder, filters, @desc, @sort_by
 
   in: (query)->
     @_filters query, (target, req)->
       switch type req
         when Array
           (o)->
+            set = set_for o[target]
             for key in req
-              return true if key in o[target]
+              return true if set[key]
             false
         when RegExp
           (o)->
@@ -41,13 +49,14 @@ class Mem.Query
             false
         when null, Boolean, String, Number
           (o)->
-            req in o[target]
+            set = set_for o[target]
+            set[req]
         else
           console.log [type req, req]
           throw Error 'unimplemented'
 
   distinct: (reduce, target)->
-    query = new Mem.Query @finder, @filters, @desc, @sort_by
+    query = new Query @finder, @filters, @desc, @sort_by
     query._distinct = {reduce, target}
     query
 
@@ -55,8 +64,9 @@ class Mem.Query
     @_filters query, (target, req)->
       switch type req
         when Array
+          set = set_for req
           (o)->
-            o[target] in req
+            set[ o[target] ]
         when RegExp
           (o)-> req.test o[target]
         when Function
@@ -89,13 +99,22 @@ class Mem.Query
           console.log [type req, req]
           throw Error 'unimplemented'
     return @ if desc == @desc && sort_by == @sort_by
-    new Mem.Query @finder, @filters, desc, sort_by
+    new Query @finder, @filters, desc, sort_by
+
+  shuffle: ->
+    new Query @finder, @filters, false, Math.random
 
   clear: ->
     delete @_reduce
     delete @_list
     delete @_hash
     delete @_memory
+
+  save: ->
+    @finder.save(@)
+
+  fetch: ->
+    @
 
   def @.prototype, "reduce",
     get: ->

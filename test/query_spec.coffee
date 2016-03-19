@@ -1,9 +1,9 @@
-Mem = require("../memory-record.min.js")
+{Collection, Query, Rule} = require("../memory-record.min.js")
 
-describe "Mem", ()->
+describe "Collection", ()->
   it "set", ->
-    new Mem.Rule("test").schema ->
-    Mem.rule.test.set [
+    new Rule("test").schema ->
+    Collection.test.set [
       _id: 10
       key: "A"
       list: ["A"]
@@ -16,33 +16,43 @@ describe "Mem", ()->
       data:
         msg: "Bye World!"
     ]
-    Mem.rule.test.create
+    Collection.test.create
       _id: "news"
       key: "A"
       list: ["A"]
       data:
         msg: "Merge World!"
 
-    Mem.rule.test.create
+    Collection.test.create
       _id: "newnews"
       key: "C"
       list: ["C"]
       data:
         msg: "Merge New World!"
 
-    expect( Mem.tests.ids ).to.have.members ["10", "20", "news", "newnews"]
+    expect( Query.tests.pluck("_id") ).to.have.members [10, 20, "news", "newnews"]
 
+describe "Query", ()->
   it "where selection", ->
-    expect( Mem.tests.where(key: "A").ids ).to.have.members ["10", "news"]
+    expect( Query.tests.where(key: "A").pluck("_id") ).to.have.members [10, "news"]
 
   it "where allay selection", ->
-    expect( Mem.tests.where(key: ["C","A"]).ids ).to.have.members ["10", "news", "newnews"]
+    expect( Query.tests.where(key: ["C","A"]).pluck("_id") ).to.have.members [10, "news", "newnews"]
 
   it "where regex selection", ->
-    expect( Mem.tests.where(key: /^A/).ids ).to.have.members ["10", "news"]
+    expect( Query.tests.where(key: /^A/).pluck("_id") ).to.have.members [10, "news"]
 
   it "where in selection", ->
-    expect( Mem.tests.in(key: "A").ids ).to.have.members ["10", "20", "news"]
+    expect( Query.tests.in(key: "A").pluck("_id") ).to.have.members [10, 20, "news"]
 
   it "where in selection", ->
-    expect( Mem.tests.in(list: "A").ids ).to.have.members ["10", "20", "news"]
+    expect( Query.tests.in(list: "A").pluck("_id") ).to.have.members [10, 20, "news"]
+
+  it "sort ascends", ->
+    expect( Query.tests.sort(false, "_id").pluck("_id").join("-") ).to.eq "10-20-newnews-news"
+
+  it "sort descends", ->
+    expect( Query.tests.sort("desc", "_id").pluck("_id").join("-") ).to.eq "20-10-news-newnews"
+
+  it "shuffle", ->
+    expect( Query.tests.shuffle().pluck("_id") ).to.have.members [10, 20, "news", "newnews"]

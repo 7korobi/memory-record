@@ -1,9 +1,9 @@
-Mem = require("../memory-record.min.js")
+{Collection, Query, Rule} = require("../memory-record.min.js")
 
-describe "Mem", ()->
+describe "Collection", ()->
   it "set and query ids", ->
-    new Mem.Rule("test").schema ->
-    Mem.rule.test.set [
+    new Rule("test").schema ->
+    Collection.test.set [
       _id: 10
       data:
         msg: "Hello World!"
@@ -12,36 +12,37 @@ describe "Mem", ()->
       data:
         msg: "Bye World!"
     ]
-    Mem.rule.test.add
+    Collection.test.add
       _id: "news"
       data:
         msg: "Merge World!"
 
-    expect( Mem.tests.ids ).to.have.members ["10", "20", "news"]
+    expect( Query.tests.ids ).to.have.members ["10", "20", "news"]
 
-  it "query list", ->
-    expect( Mem.tests.list[0]._id ).to.eq 10
-    expect( Mem.tests.list[0].test_id ).to.eq 10
-    expect( Mem.tests.list[0].data.msg ).to.eq "Hello World!"
+describe "Query", ()->
+  it "list", ->
+    expect( Query.tests.list[0]._id ).to.eq 10
+    expect( Query.tests.list[0].test_id ).to.eq 10
+    expect( Query.tests.list[0].data.msg ).to.eq "Hello World!"
 
-    expect( Mem.tests.list[1]._id ).to.eq 20
-    expect( Mem.tests.list[1].test_id ).to.eq 20
-    expect( Mem.tests.list[1].data.msg ).to.eq "Bye World!"
+    expect( Query.tests.list[1]._id ).to.eq 20
+    expect( Query.tests.list[1].test_id ).to.eq 20
+    expect( Query.tests.list[1].data.msg ).to.eq "Bye World!"
 
-    expect( Mem.tests.list[2]._id ).to.eq "news"
-    expect( Mem.tests.list[2].test_id ).to.eq "news"
-    expect( Mem.tests.list[2].data.msg ).to.eq "Merge World!"
+    expect( Query.tests.list[2]._id ).to.eq "news"
+    expect( Query.tests.list[2].test_id ).to.eq "news"
+    expect( Query.tests.list[2].data.msg ).to.eq "Merge World!"
 
 
-  it "query hash", ->
-    expect( Mem.tests.hash[10]._id ).to.eq 10
-    expect( Mem.tests.hash[10].test_id ).to.eq 10
-    expect( Mem.tests.hash[10].data.msg ).to.eq "Hello World!"
+  it "hash", ->
+    expect( Query.tests.hash[10]._id ).to.eq 10
+    expect( Query.tests.hash[10].test_id ).to.eq 10
+    expect( Query.tests.hash[10].data.msg ).to.eq "Hello World!"
 
-    expect( Mem.tests.hash[20]._id ).to.eq 20
-    expect( Mem.tests.hash[20].test_id ).to.eq 20
-    expect( Mem.tests.hash[20].data.msg ).to.eq "Bye World!"
+    expect( Query.tests.hash[20]._id ).to.eq 20
+    expect( Query.tests.hash[20].test_id ).to.eq 20
+    expect( Query.tests.hash[20].data.msg ).to.eq "Bye World!"
 
-    expect( Mem.tests.hash.news._id ).to.eq "news"
-    expect( Mem.tests.hash.news.test_id ).to.eq "news"
-    expect( Mem.tests.hash.news.data.msg ).to.eq "Merge World!"
+    expect( Query.tests.hash.news._id ).to.eq "news"
+    expect( Query.tests.hash.news.test_id ).to.eq "news"
+    expect( Query.tests.hash.news.data.msg ).to.eq "Merge World!"

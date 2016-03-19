@@ -31,7 +31,7 @@ class Mem.Rule
     (item, parent)->
       switch type item
         when Object
-          cb.bind(@) [item], parent
+          cb.call @, [item], parent
         else
           throw Error 'invalid data : #{item}'
 
@@ -46,7 +46,18 @@ class Mem.Rule
   create: f_item f_merge
   remove: f_item f_remove
 
+  fetch: ->
+    { sync } = @finder
+    return false unless sync
+    try
+      list = for _id in sync.load_index()
+        sync.load _id
 
+      f_set.call @, list
+      true
+    catch { message }
+      console.log message
+      false
 
   constructor: (field)->
     @id = "#{field}_id"
@@ -62,8 +73,8 @@ class Mem.Rule
     @finder = new Mem.Finder (list)-> list
     @finder.name = @list_name
 
-    Mem.rule[field] = @
-    Mem[@list_name] = @finder.query.all
+    Mem.Collection[field] = @
+    Mem.Query[@list_name] = @finder.query.all
 
   schema: (cb)->
     cache_scope = (key, finder, query_call)->
@@ -75,6 +86,9 @@ class Mem.Rule
           finder.query.all[key] = query_call
 
     definer =
+      sync: (storage, table_name = @list_name)=>
+        @finder.sync = new storage table_name
+
       scope: (cb)=>
         @finder.scope = cb @finder.query.all
         for key, query_call of @finder.scope
@@ -94,7 +108,7 @@ class Mem.Rule
 
         def @base_obj, parent,
           get: ->
-            Mem[parents].find @[parent_id]
+            Mem.Query[parents].find @[parent_id]
 
         dependent = option?.dependent?
         if dependent
@@ -107,17 +121,22 @@ class Mem.Rule
         query = option?.query
 
         cache_scope children, @finder, (id)->
-          query ?= Mem[children]
+          query ?= Mem.Query[children]
           query.where (o)-> o[key] == id
 
         def @base_obj, children,
           get: ->
             all[children](@._id)
 
+      shuffle: ->
+        query = @finder.query.all.shuffle()
+        query._memory = @finder.query.all._memory
+        Mem.Query[@list_name] = @finder.query.all = query
+
       order: (order)=>
         query = @finder.query.all.sort false, order
         query._memory = @finder.query.all._memory
-        Mem[@list_name] = @finder.query.all = query
+        Mem.Query[@list_name] = @finder.query.all = query
 
       protect: (keys...)=>
         @protect = (o, old)->
