@@ -12,29 +12,28 @@ base "0123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"
 patch_size = serial.size * serial.size * serial.size
 
 
-string_parser = (val)->
-  switch val
-    when "", null, undefined
-      ""
-    else
-      String(val)
+textfy = (cb)->
+  (val)->
+    switch val
+      when "", null, undefined
+        ""
+      else
+        cb(val)
 
-string_serializer = (val)->
-  switch val
-    when "", null, undefined
-      ""
-    else
-      String(val).replace ///[~\/=.&\?\#\[\]()\"'`;]///g, (s)->
-        "%" + s.charCodeAt(0).toString(16)
-
+string_parser = string_serializer = textfy String
+symbol_parser = textfy decodeURI
+url_serializer = textfy encodeURI
+symbol_serializer = textfy (val)->
+  String(val).replace ///[~\/=.&\?\#\[\]()\"'`;]///g, (s)->
+    "%" + s.charCodeAt(0).toString(16).toUpperCase()
 
 array_base_parser = (val)->
-  if Array.isArray(val)
-    val
-  else
-    "#{val}".split ","
-
-
+  return val if Array.isArray val
+  switch val
+    when "", null, undefined
+      []
+    else
+      string_parser(val).split ","
 
 pack =
   Url: {}
@@ -55,7 +54,7 @@ pack =
     if Array.isArray(val)
       val.join ","
     else
-      "#{val}"
+      string_parser(val)
 
   Date: (val)->
     time = Math.floor val
@@ -68,8 +67,11 @@ pack =
   Bool: (bool)->
     if bool then "T" else "F"
 
+  Text:      symbol_serializer
+  Cookie:    symbol_serializer
+  Url:       url_serializer
+
   Number:    string_serializer
-  Text:      string_serializer
   String:    string_serializer
   null:      string_serializer
   undefined: string_serializer
@@ -102,10 +104,7 @@ unpack =
     hash
 
   Array: (val)->
-    if val.length
-      array_base_parser(val)
-    else
-      []
+    array_base_parser(val)
 
   Date: (code)->
     return code if 0 < code
@@ -128,8 +127,11 @@ unpack =
       else
         Number.NaN
 
+  Text:      symbol_parser
+  Cookie:    symbol_parser
+  Url:       symbol_parser
+
   Number: Number
-  Text:      string_parser
   String:    string_parser
   null:      string_parser
   undefined: string_parser
@@ -143,6 +145,7 @@ Serial =
       count ?= Math.random() * patch_size
       pack.Date(date * patch_size + count)
 
+escaped = "([^\\~\\/\\=\\.\\&\\[\\]\\(\\)\\\"\\'\\`\\;]*)"
 for key, func of unpack
   Serial.url[key] =
     switch key
@@ -151,11 +154,13 @@ for key, func of unpack
       when "Date"
         "([0-9a-zA-Z]+)"
       when "Array", "Keys"
-        "([^\\~\\/\\=\\.\\&\\[\\]\\(\\)\\\"\\'\\`\\;]*)"
+        escaped
+      when "Url", "Cookie"
+        escaped
       when "Text"
-        "([^\\~\\/\\=\\.\\&\\[\\]\\(\\)\\\"\\'\\`\\;]*)"
+        escaped
       else
-        "([^\\~\\/\\=\\.\\&\\[\\]\\(\\)\\\"\\'\\`\\;]+)"
+        escaped
 
 Mem = module.exports
 Mem.pack = pack

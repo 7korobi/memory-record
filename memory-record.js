@@ -1,6 +1,6 @@
 /**
  memory-record - activerecord like in-memory data manager
- @version v0.1.1
+ @version v0.1.5
  @link https://github.com/7korobi/memory-record
  @license 
 **/
@@ -945,7 +945,7 @@
 }).call(this);
 
 (function() {
-  var Mem, Serial, array_base_parser, base, func, key, pack, patch_size, serial, string_parser, string_serializer, unpack;
+  var Mem, Serial, array_base_parser, base, escaped, func, key, pack, patch_size, serial, string_parser, string_serializer, symbol_parser, symbol_serializer, textfy, unpack, url_serializer;
 
   serial = null;
 
@@ -967,35 +967,42 @@
 
   patch_size = serial.size * serial.size * serial.size;
 
-  string_parser = function(val) {
-    switch (val) {
-      case "":
-      case null:
-      case void 0:
-        return "";
-      default:
-        return String(val);
-    }
+  textfy = function(cb) {
+    return function(val) {
+      switch (val) {
+        case "":
+        case null:
+        case void 0:
+          return "";
+        default:
+          return cb(val);
+      }
+    };
   };
 
-  string_serializer = function(val) {
-    switch (val) {
-      case "":
-      case null:
-      case void 0:
-        return "";
-      default:
-        return String(val).replace(/[~\/=.&\?\#\[\]()\"'`;]/g, function(s) {
-          return "%" + s.charCodeAt(0).toString(16);
-        });
-    }
-  };
+  string_parser = string_serializer = textfy(String);
+
+  symbol_parser = textfy(decodeURI);
+
+  url_serializer = textfy(encodeURI);
+
+  symbol_serializer = textfy(function(val) {
+    return String(val).replace(/[~\/=.&\?\#\[\]()\"'`;]/g, function(s) {
+      return "%" + s.charCodeAt(0).toString(16).toUpperCase();
+    });
+  });
 
   array_base_parser = function(val) {
     if (Array.isArray(val)) {
       return val;
-    } else {
-      return ("" + val).split(",");
+    }
+    switch (val) {
+      case "":
+      case null:
+      case void 0:
+        return [];
+      default:
+        return string_parser(val).split(",");
     }
   };
 
@@ -1028,7 +1035,7 @@
       if (Array.isArray(val)) {
         return val.join(",");
       } else {
-        return "" + val;
+        return string_parser(val);
       }
     },
     Date: function(val) {
@@ -1048,8 +1055,10 @@
         return "F";
       }
     },
+    Text: symbol_serializer,
+    Cookie: symbol_serializer,
+    Url: url_serializer,
     Number: string_serializer,
-    Text: string_serializer,
     String: string_serializer,
     "null": string_serializer,
     undefined: string_serializer
@@ -1089,11 +1098,7 @@
       return hash;
     },
     Array: function(val) {
-      if (val.length) {
-        return array_base_parser(val);
-      } else {
-        return [];
-      }
+      return array_base_parser(val);
     },
     Date: function(code) {
       var c, i, len, n, result;
@@ -1125,8 +1130,10 @@
           return Number.NaN;
       }
     },
+    Text: symbol_parser,
+    Cookie: symbol_parser,
+    Url: symbol_parser,
     Number: Number,
-    Text: string_parser,
     String: string_parser,
     "null": string_parser,
     undefined: string_parser
@@ -1147,6 +1154,8 @@
     }
   };
 
+  escaped = "([^\\~\\/\\=\\.\\&\\[\\]\\(\\)\\\"\\'\\`\\;]*)";
+
   for (key in unpack) {
     func = unpack[key];
     Serial.url[key] = (function() {
@@ -1157,11 +1166,14 @@
           return "([0-9a-zA-Z]+)";
         case "Array":
         case "Keys":
-          return "([^\\~\\/\\=\\.\\&\\[\\]\\(\\)\\\"\\'\\`\\;]*)";
+          return escaped;
+        case "Url":
+        case "Cookie":
+          return escaped;
         case "Text":
-          return "([^\\~\\/\\=\\.\\&\\[\\]\\(\\)\\\"\\'\\`\\;]*)";
+          return escaped;
         default:
-          return "([^\\~\\/\\=\\.\\&\\[\\]\\(\\)\\\"\\'\\`\\;]+)";
+          return escaped;
       }
     })();
   }
