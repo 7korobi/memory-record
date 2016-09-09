@@ -1,12 +1,3 @@
-type = (o)->
-  o?.constructor
-
-def = (obj, key, { get, set })->
-  configurable = false
-  enumerable = false
-  Object.defineProperty obj, key, { configurable, enumerable, get, set }
-  return
-
 set_for = (list)->
   set = {}
   for key in list
@@ -17,12 +8,12 @@ set_for = (list)->
 
 Mem = module.exports
 class Mem.Query
-  constructor: (@finder, @filters, @desc, @sort_by)->
+  constructor: (@finder, @filters, @type, @sort_by)->
 
   _filters: (query, cb)->
     return @ unless query
     filters = @filters.concat()
-    switch type query
+    switch query?.constructor
       when Object
         for target, req of query
           filters.push cb target, req
@@ -31,11 +22,11 @@ class Mem.Query
       else
         console.log [type query, query]
         throw Error 'unimplemented'
-    new Query @finder, filters, @desc, @sort_by
+    new Query @finder, filters, @type, @sort_by
 
   in: (query)->
     @_filters query, (target, req)->
-      switch type req
+      switch req?.constructor
         when Array
           (o)->
             set = set_for o[target]
@@ -52,17 +43,17 @@ class Mem.Query
             set = set_for o[target]
             set[req]
         else
-          console.log [type req, req]
+          console.log [req?.constructor, req]
           throw Error 'unimplemented'
 
   distinct: (reduce, target)->
-    query = new Query @finder, @filters, @desc, @sort_by
+    query = new Query @finder, @filters, @type, @sort_by
     query._distinct = {reduce, target}
     query
 
   where: (query)->
     @_filters query, (target, req)->
-      switch type req
+      switch req?.constructor
         when Array
           set = set_for req
           (o)->
@@ -88,21 +79,12 @@ class Mem.Query
     regexp = (new RegExp list.join("|"), "ig")
     @where (o)-> (! o.search_words) || regexp.test o.search_words
 
-  sort: (desc, order = @sort_by)->
-    sort_by =
-      switch type order
-        when Function
-          order
-        when String, Number
-          (o)-> o[order]
-        else
-          console.log [type req, req]
-          throw Error 'unimplemented'
-    return @ if desc == @desc && sort_by == @sort_by
-    new Query @finder, @filters, desc, sort_by
+  sort: (type, sort_by = @sort_by)->
+    return @ if type == @type && sort_by == @sort_by
+    new Query @finder, @filters, type, sort_by
 
   shuffle: ->
-    new Query @finder, @filters, false, Math.random
+    new Query @finder, @filters, "asc", Math.random
 
   clear: ->
     delete @_reduce
@@ -112,33 +94,6 @@ class Mem.Query
 
   save: ->
     @finder.save(@)
-
-  fetch: ->
-    @
-
-  def @.prototype, "reduce",
-    get: ->
-      @finder.calculate(@) unless @_reduce?
-      @_reduce
-
-  def @.prototype, "list",
-    get: ->
-      @finder.calculate(@) unless @_list?
-      @_list
-
-  def @.prototype, "hash",
-    get: ->
-      @finder.calculate(@) unless @_hash?
-      @_hash
-
-  def @.prototype, "memory",
-    get: ->
-      @finder.calculate(@) unless @_memory?
-      @_memory
-
-  def @.prototype, "ids",
-    get: ->
-      Object.keys @memory
 
   find: (id)->
     @hash[id]
@@ -152,9 +107,37 @@ class Mem.Query
       when 0
         @list.map -> null
       when 1
+        key = keys[0]
         @list.map (o)->
-          o[keys[0]]
+          o[key]
       else
         @list.map (o)->
           for key in keys
             o[key]
+
+  Object.defineProperties @.prototype,
+    reduce:
+      get: ->
+        @finder.calculate(@) unless @_reduce?
+        @_reduce
+
+    list:
+      get: ->
+        @finder.calculate(@) unless @_list?
+        @_list
+
+    hash:
+      get: ->
+        @finder.calculate(@) unless @_hash?
+        @_hash
+
+    memory:
+      get: ->
+        @finder.calculate(@) unless @_memory?
+        @_memory
+
+    ids:
+      get: ->
+        Object.keys @memory
+
+

@@ -46,19 +46,6 @@ class Mem.Rule
   create: f_item f_merge
   remove: f_item f_remove
 
-  fetch: ->
-    { sync } = @finder
-    return false unless sync
-    try
-      list = for _id in sync.load_index()
-        sync.load _id
-
-      f_set.call @, list
-      true
-    catch { message }
-      console.log message
-      false
-
   constructor: (field)->
     @id = "#{field}_id"
     @list_name = "#{field}s"
@@ -70,7 +57,7 @@ class Mem.Rule
     @deploy = (o)=>
       o._id = o[@id] unless o._id
       o[@id] = o._id unless o[@id]
-    @finder = new Mem.Finder (list)-> list
+    @finder = new Mem.Finder (o)-> o._id
     @finder.name = @list_name
 
     Mem.Collection[field] = @

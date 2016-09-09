@@ -1,7 +1,7 @@
 Mem = module.exports
 class Mem.Finder
   constructor: (@sort_by)->
-    all = new Mem.Query @, [], false, @sort_by
+    all = new Mem.Query @, [], "asc", @sort_by
     all._memory = {}
     @scope = {all}
     @query = {all}
@@ -16,22 +16,6 @@ class Mem.Finder
     for rule in rules
       rule.rehash diff
     return
-
-  save: (query)->
-    return unless @sync
-    try
-      for _id in @sync.load_index() when ! query.hash[_id]
-        @sync.delete _id
-
-      for _id, o of query.hash
-        @sync.store _id, o
-
-      @sync.store_index Object.keys query.hash
-
-      true
-    catch { message }
-      console.log message
-      false
 
   calculate_reduce: (query)->
     init = (map)->
@@ -75,37 +59,7 @@ class Mem.Finder
     query._reduce = base
 
   calculate_sort: (query)->
-    list = query._list
-
-    [lt, gt] =
-      if query.desc
-        [1, -1]
-      else
-        [-1, 1]
-
-    s = query.orders = {}
-    for o in list
-      s[o._id] = query.sort_by(o)
-    if list.length
-      is_array = Array.isArray query.sort_by(list[0])
-
-    query._list =
-      if is_array
-        list.sort (a,b)->
-          a_list = s[a._id]
-          b_list = s[b._id]
-          for a_val, index in a_list
-            b_val = b_list[index]
-            return lt if a_val < b_val
-            return gt if a_val > b_val
-          return 0
-      else
-        list.sort (a,b)->
-          a_val = s[a._id]
-          b_val = s[b._id]
-          return lt if a_val < b_val
-          return gt if a_val > b_val
-          return 0
+    query._list = query._list.sortBy query.type, query.sort_by
 
   calculate_group: (query)->
     {reduce, target} = query._distinct

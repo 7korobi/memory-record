@@ -7,10 +7,282 @@
 
 
 (function() {
+  var PermutationManager, scanner, sort, sort_do, sort_method,
+    slice = [].slice;
+
+  sort = [].sort;
+
+  scanner = function(cb) {
+    var accessor;
+    switch (cb != null ? cb.constructor : void 0) {
+      case Function:
+        return cb;
+      case String:
+        accessor = cb.split(".");
+        return function(o) {
+          var i, key, len;
+          for (i = 0, len = accessor.length; i < len; i++) {
+            key = accessor[i];
+            o = o[key];
+          }
+          return o;
+        };
+      default:
+        throw "not supported. scanner";
+    }
+  };
+
+  sort_method = function(orders, o, type) {
+    var ng, ok, ref, sort_at;
+    if (type == null) {
+      type = "asc";
+    }
+    switch (type) {
+      case "asc":
+        ok = -1;
+        ng = 1;
+        break;
+      case "desc":
+        ok = 1;
+        ng = -1;
+        break;
+      default:
+        throw "not supported. sort_method1 " + type;
+    }
+    sort_at = function(a, b) {
+      if (a < b) {
+        return ok;
+      }
+      if (a > b) {
+        return ng;
+      }
+      return 0;
+    };
+    switch (o != null ? o.constructor : void 0) {
+      case Object:
+        throw "not supported. sort_method3 " + (JSON.stringify(o));
+        break;
+      case Array:
+        switch ((ref = o[0]) != null ? ref.constructor : void 0) {
+          case Array:
+          case Object:
+            throw "not supported. sort_method2 " + o[0];
+        }
+        return function(a, b) {
+          var a_at, as, b_at, bs, diff, i, idx, len;
+          as = orders[a];
+          bs = orders[b];
+          for (idx = i = 0, len = as.length; i < len; idx = ++i) {
+            a_at = as[idx];
+            b_at = bs[idx];
+            diff = sort_at(a_at, b_at);
+            if (diff) {
+              return diff;
+            }
+          }
+          return 0;
+        };
+      default:
+        return function(a, b) {
+          var a_at, b_at;
+          a_at = orders[a];
+          b_at = orders[b];
+          return sort_at(a_at, b_at);
+        };
+    }
+  };
+
+  sort_do = function(type, orders, values) {
+    var i, ref, results;
+    return sort.call((function() {
+      results = [];
+      for (var i = 0, ref = values.length; 0 <= ref ? i < ref : i > ref; 0 <= ref ? i++ : i--){ results.push(i); }
+      return results;
+    }).apply(this), sort_method(orders, orders[0], type)).map(function(idx) {
+      return values[idx];
+    });
+  };
+
+  Object.defineProperties(Array.prototype, {
+    first: {
+      get: function() {
+        return this[0];
+      }
+    },
+    last: {
+      get: function() {
+        return this[this.length - 1];
+      }
+    },
+    choice: {
+      get: function() {
+        var idx;
+        idx = Math.floor(Math.random() * this.length);
+        return this[idx];
+      }
+    },
+    shuffle: {
+      value: function() {
+        return this.sortBy(function(o) {
+          return Math.random();
+        });
+      }
+    },
+    sort: {
+      value: function(type) {
+        switch (type) {
+          case "asc":
+          case "desc":
+            return sort_do(type, this, this);
+          default:
+            return sort.call(this, type);
+        }
+      }
+    },
+    sortBy: {
+      value: function() {
+        var args, cb, i, o, orders, type;
+        args = 2 <= arguments.length ? slice.call(arguments, 0, i = arguments.length - 1) : (i = 0, []), cb = arguments[i++];
+        type = args[0];
+        cb = scanner(cb);
+        orders = (function() {
+          var j, len, results;
+          results = [];
+          for (j = 0, len = this.length; j < len; j++) {
+            o = this[j];
+            results.push(cb(o));
+          }
+          return results;
+        }).call(this);
+        return sort_do(type, orders, this);
+      }
+    },
+    permutation: {
+      value: function(gen) {
+        var combinations, product_roop, products, products_val, shuffles, zip_idx, zip_max, zips;
+        combinations = [];
+        products = [];
+        shuffles = [];
+        zips = [];
+        gen.call({
+          repeated_combination: function() {
+            var list, n;
+            n = arguments[0], list = 2 <= arguments.length ? slice.call(arguments, 1) : [];
+            combinations.push(n);
+            return this.product(list);
+          },
+          combination: function() {
+            var list, n;
+            n = arguments[0], list = 2 <= arguments.length ? slice.call(arguments, 1) : [];
+            combinations.push(n);
+            return this.product(list);
+          },
+          product: function() {
+            var list;
+            list = 1 <= arguments.length ? slice.call(arguments, 0) : [];
+            return products.push(list);
+          },
+          shuffle: function() {
+            var list;
+            list = 1 <= arguments.length ? slice.call(arguments, 0) : [];
+            return shuffles.push(list);
+          },
+          zip: function() {
+            var list;
+            list = 1 <= arguments.length ? slice.call(arguments, 0) : [];
+            return zips.push(list);
+          }
+        });
+        zip_idx = 0;
+        zip_max = Math.max(zips.map(function(o) {
+          return o.length;
+        }));
+        products_val = [];
+        product_roop = function(idx, result) {
+          var combination_at, i, item, len, product_at, ref, repeated, shuffle_at, shuffles_val, zip_at, zips_val;
+          if (result == null) {
+            result = [];
+          }
+          if (!products[idx]) {
+            return;
+          }
+          ref = products[idx];
+          for (i = 0, len = ref.length; i < len; i++) {
+            item = ref[i];
+            if (zip_max && zip_max < zip_idx) {
+              return result;
+            }
+            repeated = products_val[idx - 1] === item;
+            if (repeated && repeat_check) {
+              continue;
+            }
+            products_val[idx] = item;
+            if (product_roop(idx + 1, result)) {
+              continue;
+            }
+            zips_val = zips.map(function(o) {
+              return o[zip_idx];
+            });
+            shuffles_val = shuffles.map(function(o) {
+              return o.choice;
+            });
+            zip_idx++;
+            combination_at = 0;
+            product_at = 0;
+            shuffle_at = 0;
+            zip_at = 0;
+            result.push(gen.call({
+              repeated_combination: function() {
+                var j, n, ref1, results;
+                n = combinations[combination_at++];
+                results = [];
+                for (idx = j = 0, ref1 = n; 0 <= ref1 ? j <= ref1 : j >= ref1; idx = 0 <= ref1 ? ++j : --j) {
+                  results.push(this.product());
+                }
+                return results;
+              },
+              combination: function() {
+                var j, n, ref1, results;
+                n = combinations[combination_at++];
+                results = [];
+                for (idx = j = 0, ref1 = n; 0 <= ref1 ? j <= ref1 : j >= ref1; idx = 0 <= ref1 ? ++j : --j) {
+                  results.push(this.product());
+                }
+                return results;
+              },
+              product: function() {
+                return products_val[product_at++];
+              },
+              shuffle: function() {
+                return shuffles_val[shuffle_at++];
+              },
+              zip: function() {
+                return zips_val[zip_at++];
+              }
+            }));
+          }
+          return result;
+        };
+        return product_roop(0);
+      }
+    }
+  });
+
+  PermutationManager = (function() {
+    function PermutationManager() {
+      this.list = [];
+    }
+
+    return PermutationManager;
+
+  })();
+
+}).call(this);
+
+(function() {
   var Mem;
 
   module.exports = Mem = {
-    Sync: {},
     Query: {},
     Collection: {}
   };
@@ -26,7 +298,7 @@
     function Finder(sort_by) {
       var all;
       this.sort_by = sort_by;
-      all = new Mem.Query(this, [], false, this.sort_by);
+      all = new Mem.Query(this, [], "asc", this.sort_by);
       all._memory = {};
       this.scope = {
         all: all
@@ -47,33 +319,6 @@
       for (i = 0, len = rules.length; i < len; i++) {
         rule = rules[i];
         rule.rehash(diff);
-      }
-    };
-
-    Finder.prototype.save = function(query) {
-      var _id, i, len, message, o, ref, ref1;
-      if (!this.sync) {
-        return;
-      }
-      try {
-        ref = this.sync.load_index();
-        for (i = 0, len = ref.length; i < len; i++) {
-          _id = ref[i];
-          if (!query.hash[_id]) {
-            this.sync["delete"](_id);
-          }
-        }
-        ref1 = query.hash;
-        for (_id in ref1) {
-          o = ref1[_id];
-          this.sync.store(_id, o);
-        }
-        this.sync.store_index(Object.keys(query.hash));
-        return true;
-      } catch (_error) {
-        message = _error.message;
-        console.log(message);
-        return false;
       }
     };
 
@@ -149,44 +394,7 @@
     };
 
     Finder.prototype.calculate_sort = function(query) {
-      var gt, i, is_array, len, list, lt, o, ref, s;
-      list = query._list;
-      ref = query.desc ? [1, -1] : [-1, 1], lt = ref[0], gt = ref[1];
-      s = query.orders = {};
-      for (i = 0, len = list.length; i < len; i++) {
-        o = list[i];
-        s[o._id] = query.sort_by(o);
-      }
-      if (list.length) {
-        is_array = Array.isArray(query.sort_by(list[0]));
-      }
-      return query._list = is_array ? list.sort(function(a, b) {
-        var a_list, a_val, b_list, b_val, index, j, len1;
-        a_list = s[a._id];
-        b_list = s[b._id];
-        for (index = j = 0, len1 = a_list.length; j < len1; index = ++j) {
-          a_val = a_list[index];
-          b_val = b_list[index];
-          if (a_val < b_val) {
-            return lt;
-          }
-          if (a_val > b_val) {
-            return gt;
-          }
-        }
-        return 0;
-      }) : list.sort(function(a, b) {
-        var a_val, b_val;
-        a_val = s[a._id];
-        b_val = s[b._id];
-        if (a_val < b_val) {
-          return lt;
-        }
-        if (a_val > b_val) {
-          return gt;
-        }
-        return 0;
-      });
+      return query._list = query._list.sortBy(query.type, query.sort_by);
     };
 
     Finder.prototype.calculate_group = function(query) {
@@ -260,25 +468,8 @@
 }).call(this);
 
 (function() {
-  var Mem, def, set_for, type,
+  var Mem, set_for,
     slice = [].slice;
-
-  type = function(o) {
-    return o != null ? o.constructor : void 0;
-  };
-
-  def = function(obj, key, arg) {
-    var configurable, enumerable, get, set;
-    get = arg.get, set = arg.set;
-    configurable = false;
-    enumerable = false;
-    Object.defineProperty(obj, key, {
-      configurable: configurable,
-      enumerable: enumerable,
-      get: get,
-      set: set
-    });
-  };
 
   set_for = function(list) {
     var i, key, len, set;
@@ -293,10 +484,10 @@
   Mem = module.exports;
 
   Mem.Query = (function() {
-    function Query(finder, filters1, desc1, sort_by1) {
+    function Query(finder, filters1, type1, sort_by1) {
       this.finder = finder;
       this.filters = filters1;
-      this.desc = desc1;
+      this.type = type1;
       this.sort_by = sort_by1;
     }
 
@@ -306,7 +497,7 @@
         return this;
       }
       filters = this.filters.concat();
-      switch (type(query)) {
+      switch (query != null ? query.constructor : void 0) {
         case Object:
           for (target in query) {
             req = query[target];
@@ -320,12 +511,12 @@
           console.log([type(query, query)]);
           throw Error('unimplemented');
       }
-      return new Query(this.finder, filters, this.desc, this.sort_by);
+      return new Query(this.finder, filters, this.type, this.sort_by);
     };
 
     Query.prototype["in"] = function(query) {
       return this._filters(query, function(target, req) {
-        switch (type(req)) {
+        switch (req != null ? req.constructor : void 0) {
           case Array:
             return function(o) {
               var i, key, len, set;
@@ -360,7 +551,7 @@
               return set[req];
             };
           default:
-            console.log([type(req, req)]);
+            console.log([req != null ? req.constructor : void 0, req]);
             throw Error('unimplemented');
         }
       });
@@ -368,7 +559,7 @@
 
     Query.prototype.distinct = function(reduce, target) {
       var query;
-      query = new Query(this.finder, this.filters, this.desc, this.sort_by);
+      query = new Query(this.finder, this.filters, this.type, this.sort_by);
       query._distinct = {
         reduce: reduce,
         target: target
@@ -379,7 +570,7 @@
     Query.prototype.where = function(query) {
       return this._filters(query, function(target, req) {
         var set;
-        switch (type(req)) {
+        switch (req != null ? req.constructor : void 0) {
           case Array:
             set = set_for(req);
             return function(o) {
@@ -433,33 +624,18 @@
       });
     };
 
-    Query.prototype.sort = function(desc, order) {
-      var sort_by;
-      if (order == null) {
-        order = this.sort_by;
+    Query.prototype.sort = function(type, sort_by) {
+      if (sort_by == null) {
+        sort_by = this.sort_by;
       }
-      sort_by = (function() {
-        switch (type(order)) {
-          case Function:
-            return order;
-          case String:
-          case Number:
-            return function(o) {
-              return o[order];
-            };
-          default:
-            console.log([type(req, req)]);
-            throw Error('unimplemented');
-        }
-      })();
-      if (desc === this.desc && sort_by === this.sort_by) {
+      if (type === this.type && sort_by === this.sort_by) {
         return this;
       }
-      return new Query(this.finder, this.filters, desc, sort_by);
+      return new Query(this.finder, this.filters, type, sort_by);
     };
 
     Query.prototype.shuffle = function() {
-      return new Query(this.finder, this.filters, false, Math.random);
+      return new Query(this.finder, this.filters, "asc", Math.random);
     };
 
     Query.prototype.clear = function() {
@@ -472,52 +648,6 @@
     Query.prototype.save = function() {
       return this.finder.save(this);
     };
-
-    Query.prototype.fetch = function() {
-      return this;
-    };
-
-    def(Query.prototype, "reduce", {
-      get: function() {
-        if (this._reduce == null) {
-          this.finder.calculate(this);
-        }
-        return this._reduce;
-      }
-    });
-
-    def(Query.prototype, "list", {
-      get: function() {
-        if (this._list == null) {
-          this.finder.calculate(this);
-        }
-        return this._list;
-      }
-    });
-
-    def(Query.prototype, "hash", {
-      get: function() {
-        if (this._hash == null) {
-          this.finder.calculate(this);
-        }
-        return this._hash;
-      }
-    });
-
-    def(Query.prototype, "memory", {
-      get: function() {
-        if (this._memory == null) {
-          this.finder.calculate(this);
-        }
-        return this._memory;
-      }
-    });
-
-    def(Query.prototype, "ids", {
-      get: function() {
-        return Object.keys(this.memory);
-      }
-    });
 
     Query.prototype.find = function(id) {
       return this.hash[id];
@@ -536,7 +666,7 @@
     };
 
     Query.prototype.pluck = function() {
-      var keys;
+      var key, keys;
       keys = 1 <= arguments.length ? slice.call(arguments, 0) : [];
       switch (keys.length) {
         case 0:
@@ -544,12 +674,13 @@
             return null;
           });
         case 1:
+          key = keys[0];
           return this.list.map(function(o) {
-            return o[keys[0]];
+            return o[key];
           });
         default:
           return this.list.map(function(o) {
-            var i, key, len, results;
+            var i, len, results;
             results = [];
             for (i = 0, len = keys.length; i < len; i++) {
               key = keys[i];
@@ -559,6 +690,46 @@
           });
       }
     };
+
+    Object.defineProperties(Query.prototype, {
+      reduce: {
+        get: function() {
+          if (this._reduce == null) {
+            this.finder.calculate(this);
+          }
+          return this._reduce;
+        }
+      },
+      list: {
+        get: function() {
+          if (this._list == null) {
+            this.finder.calculate(this);
+          }
+          return this._list;
+        }
+      },
+      hash: {
+        get: function() {
+          if (this._hash == null) {
+            this.finder.calculate(this);
+          }
+          return this._hash;
+        }
+      },
+      memory: {
+        get: function() {
+          if (this._memory == null) {
+            this.finder.calculate(this);
+          }
+          return this._memory;
+        }
+      },
+      ids: {
+        get: function() {
+          return Object.keys(this.memory);
+        }
+      }
+    });
 
     return Query;
 
@@ -642,32 +813,6 @@
 
     Rule.prototype.remove = f_item(f_remove);
 
-    Rule.prototype.fetch = function() {
-      var _id, list, message, sync;
-      sync = this.finder.sync;
-      if (!sync) {
-        return false;
-      }
-      try {
-        list = (function() {
-          var i, len, ref, results;
-          ref = sync.load_index();
-          results = [];
-          for (i = 0, len = ref.length; i < len; i++) {
-            _id = ref[i];
-            results.push(sync.load(_id));
-          }
-          return results;
-        })();
-        f_set.call(this, list);
-        return true;
-      } catch (_error) {
-        message = _error.message;
-        console.log(message);
-        return false;
-      }
-    };
-
     function Rule(field) {
       var base;
       this.id = field + "_id";
@@ -687,8 +832,8 @@
           }
         };
       })(this);
-      this.finder = new Mem.Finder(function(list) {
-        return list;
+      this.finder = new Mem.Finder(function(o) {
+        return o._id;
       });
       this.finder.name = this.list_name;
       Mem.Collection[field] = this;
@@ -1185,80 +1330,5 @@
   Mem.unpack = unpack;
 
   Mem.Serial = Serial;
-
-}).call(this);
-
-(function() {
-  var Sync, pack, ref, test, testStorage, unpack, web_storage;
-
-  ref = module.exports, Sync = ref.Sync, pack = ref.pack, unpack = ref.unpack;
-
-  web_storage = function(storage) {
-    return function(name) {
-      var key;
-      key = function(_id) {
-        return name + "~" + _id;
-      };
-      return {
-        load_index: function() {
-          var str;
-          str = storage.getItem(name);
-          if (str) {
-            return unpack.Array(str);
-          } else {
-            return [];
-          }
-        },
-        load: function(_id) {
-          return JSON.parse(storage.getItem(key(_id)) || (function() {
-            throw "Record Not Found";
-          })());
-        },
-        store_index: function(ids) {
-          return storage.setItem(name, pack.Array(ids));
-        },
-        store: function(_id, model) {
-          return storage.setItem(key(_id), JSON.stringify(model));
-        },
-        "delete": function(_id) {
-          return storage.removeItem(key(_id));
-        }
-      };
-    };
-  };
-
-  test = {};
-
-  testStorage = {
-    key: function(idx) {
-      return Object.keys(test)[idx];
-    },
-    setItem: function(key, val) {
-      test[key] = val;
-      console.log(":: " + key + " => " + val);
-      return void 0;
-    },
-    getItem: function(key) {
-      var val;
-      return val = test[key];
-    },
-    removeItem: function(key) {
-      var val;
-      val = test[key];
-      delete test[key];
-      console.log(":: " + key + " delete (" + val + ")");
-      return void 0;
-    }
-  };
-
-  if (typeof sessionStorage !== "undefined" && sessionStorage !== null) {
-    Sync.session = web_storage(sessionStorage);
-  }
-
-  if (typeof localStorage !== "undefined" && localStorage !== null) {
-    Sync.local = web_storage(localStorage);
-  }
-
-  Sync.test = web_storage(testStorage);
 
 }).call(this);
