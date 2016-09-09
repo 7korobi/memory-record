@@ -7,7 +7,7 @@
 
 
 (function() {
-  var PermutationManager, scanner, sort, sort_do, sort_method,
+  var scanner, sort, sort_do, sort_method,
     slice = [].slice;
 
   sort = [].sort;
@@ -156,126 +156,8 @@
         }).call(this);
         return sort_do(type, orders, this);
       }
-    },
-    permutation: {
-      value: function(gen) {
-        var combinations, product_roop, products, products_val, shuffles, zip_idx, zip_max, zips;
-        combinations = [];
-        products = [];
-        shuffles = [];
-        zips = [];
-        gen.call({
-          repeated_combination: function() {
-            var list, n;
-            n = arguments[0], list = 2 <= arguments.length ? slice.call(arguments, 1) : [];
-            combinations.push(n);
-            return this.product(list);
-          },
-          combination: function() {
-            var list, n;
-            n = arguments[0], list = 2 <= arguments.length ? slice.call(arguments, 1) : [];
-            combinations.push(n);
-            return this.product(list);
-          },
-          product: function() {
-            var list;
-            list = 1 <= arguments.length ? slice.call(arguments, 0) : [];
-            return products.push(list);
-          },
-          shuffle: function() {
-            var list;
-            list = 1 <= arguments.length ? slice.call(arguments, 0) : [];
-            return shuffles.push(list);
-          },
-          zip: function() {
-            var list;
-            list = 1 <= arguments.length ? slice.call(arguments, 0) : [];
-            return zips.push(list);
-          }
-        });
-        zip_idx = 0;
-        zip_max = Math.max(zips.map(function(o) {
-          return o.length;
-        }));
-        products_val = [];
-        product_roop = function(idx, result) {
-          var combination_at, i, item, len, product_at, ref, repeated, shuffle_at, shuffles_val, zip_at, zips_val;
-          if (result == null) {
-            result = [];
-          }
-          if (!products[idx]) {
-            return;
-          }
-          ref = products[idx];
-          for (i = 0, len = ref.length; i < len; i++) {
-            item = ref[i];
-            if (zip_max && zip_max < zip_idx) {
-              return result;
-            }
-            repeated = products_val[idx - 1] === item;
-            if (repeated && repeat_check) {
-              continue;
-            }
-            products_val[idx] = item;
-            if (product_roop(idx + 1, result)) {
-              continue;
-            }
-            zips_val = zips.map(function(o) {
-              return o[zip_idx];
-            });
-            shuffles_val = shuffles.map(function(o) {
-              return o.choice;
-            });
-            zip_idx++;
-            combination_at = 0;
-            product_at = 0;
-            shuffle_at = 0;
-            zip_at = 0;
-            result.push(gen.call({
-              repeated_combination: function() {
-                var j, n, ref1, results;
-                n = combinations[combination_at++];
-                results = [];
-                for (idx = j = 0, ref1 = n; 0 <= ref1 ? j <= ref1 : j >= ref1; idx = 0 <= ref1 ? ++j : --j) {
-                  results.push(this.product());
-                }
-                return results;
-              },
-              combination: function() {
-                var j, n, ref1, results;
-                n = combinations[combination_at++];
-                results = [];
-                for (idx = j = 0, ref1 = n; 0 <= ref1 ? j <= ref1 : j >= ref1; idx = 0 <= ref1 ? ++j : --j) {
-                  results.push(this.product());
-                }
-                return results;
-              },
-              product: function() {
-                return products_val[product_at++];
-              },
-              shuffle: function() {
-                return shuffles_val[shuffle_at++];
-              },
-              zip: function() {
-                return zips_val[zip_at++];
-              }
-            }));
-          }
-          return result;
-        };
-        return product_roop(0);
-      }
     }
   });
-
-  PermutationManager = (function() {
-    function PermutationManager() {
-      this.list = [];
-    }
-
-    return PermutationManager;
-
-  })();
 
 }).call(this);
 
@@ -464,6 +346,119 @@
     return Finder;
 
   })();
+
+}).call(this);
+
+(function() {
+  var slice = [].slice;
+
+  Math.permutation = function(gen) {
+    var combinations, product_roop, products, products_val, shuffles, zip_idx, zip_max, zips;
+    combinations = [];
+    products = [];
+    shuffles = [];
+    zips = [];
+    gen.call({
+      repeated_combination: function() {
+        var list, n;
+        n = arguments[0], list = 2 <= arguments.length ? slice.call(arguments, 1) : [];
+        combinations.push(n);
+        return this.product(list);
+      },
+      combination: function() {
+        var list, n;
+        n = arguments[0], list = 2 <= arguments.length ? slice.call(arguments, 1) : [];
+        combinations.push(n);
+        return this.product(list);
+      },
+      product: function() {
+        var list;
+        list = 1 <= arguments.length ? slice.call(arguments, 0) : [];
+        return products.push(list);
+      },
+      shuffle: function() {
+        var list;
+        list = 1 <= arguments.length ? slice.call(arguments, 0) : [];
+        return shuffles.push(list);
+      },
+      zip: function() {
+        var list;
+        list = 1 <= arguments.length ? slice.call(arguments, 0) : [];
+        return zips.push(list);
+      }
+    });
+    zip_idx = 0;
+    zip_max = Math.max(zips.map(function(o) {
+      return o.length;
+    }));
+    products_val = [];
+    product_roop = function(idx, result) {
+      var combination_at, i, item, len, product_at, ref, repeated, shuffle_at, shuffles_val, zip_at, zips_val;
+      if (result == null) {
+        result = [];
+      }
+      if (!products[idx]) {
+        return;
+      }
+      ref = products[idx];
+      for (i = 0, len = ref.length; i < len; i++) {
+        item = ref[i];
+        if (zip_max && zip_max < zip_idx) {
+          return result;
+        }
+        repeated = products_val[idx - 1] === item;
+        if (repeated && repeat_check) {
+          continue;
+        }
+        products_val[idx] = item;
+        if (product_roop(idx + 1, result)) {
+          continue;
+        }
+        zips_val = zips.map(function(o) {
+          return o[zip_idx];
+        });
+        shuffles_val = shuffles.map(function(o) {
+          return o.choice;
+        });
+        zip_idx++;
+        combination_at = 0;
+        product_at = 0;
+        shuffle_at = 0;
+        zip_at = 0;
+        result.push(gen.call({
+          repeated_combination: function() {
+            var j, n, ref1, results;
+            n = combinations[combination_at++];
+            results = [];
+            for (idx = j = 0, ref1 = n; 0 <= ref1 ? j <= ref1 : j >= ref1; idx = 0 <= ref1 ? ++j : --j) {
+              results.push(this.product());
+            }
+            return results;
+          },
+          combination: function() {
+            var j, n, ref1, results;
+            n = combinations[combination_at++];
+            results = [];
+            for (idx = j = 0, ref1 = n; 0 <= ref1 ? j <= ref1 : j >= ref1; idx = 0 <= ref1 ? ++j : --j) {
+              results.push(this.product());
+            }
+            return results;
+          },
+          product: function() {
+            return products_val[product_at++];
+          },
+          shuffle: function() {
+            return shuffles_val[shuffle_at++];
+          },
+          zip: function() {
+            return zips_val[zip_at++];
+          }
+        }));
+      }
+      return result;
+    };
+    return product_roop(0);
+  };
 
 }).call(this);
 

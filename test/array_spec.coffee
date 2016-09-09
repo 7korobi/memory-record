@@ -1,25 +1,5 @@
 require("../memory-record.min.js")
 
-
-###
-a = (str)->
-  for c in str
-    c
-
-list = permutation ->
-  _id: @zip [1..0b1000]...
-  attr:
-    type: @product "icon", "btn"
-  label: @shuffle a("あかさたな")...
-  current: null
-  options:
-    @product
-      cog:   "画面表示を調整します。"
-    , home:  "村の設定、アナウンスを表示します。"
-
-###
-
-
 describe "Array", ()->
   it "<Number> sort", ->
     expect( [3,2,10].sort() ).to.have.members [2,3,10]
