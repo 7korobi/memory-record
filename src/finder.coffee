@@ -1,7 +1,9 @@
+_ = require "lodash"
+
 Mem = module.exports
 class Mem.Finder
-  constructor: (@sort_by)->
-    all = new Mem.Query @, [], "asc", @sort_by
+  constructor: (@sortBy, @orderBy)->
+    all = new Mem.Query @, [], @sortBy, @orderBy
     all._memory = {}
     @scope = {all}
     @query = {all}
@@ -17,7 +19,7 @@ class Mem.Finder
       rule.rehash diff
     return
 
-  calculate_reduce: (query)->
+  _reduce: (query)->
     init = (map)->
       o = {}
       o.count = 0 if map.count
@@ -58,16 +60,22 @@ class Mem.Finder
         calc map
     query._reduce = base
 
-  calculate_sort: (query)->
-    query._list = query._list.sortBy query.type, query.sort_by
+  _sort: (query)->
+    { sortBy, orderBy } = query
+    query._list =
+      if orderBy
+        _.orderBy query._list, sortBy, orderBy
+      else
+        _.sortBy query._list, sortBy, orderBy
 
-  calculate_group: (query)->
+
+  _group: (query)->
     {reduce, target} = query._distinct
     query._list =
       for id, o of query._reduce[reduce]
         o[target]
 
-  calculate_list: (query, all)->
+  _list: (query, all)->
     if query._memory == all
       deploy = (id, o)->
         query._hash[id] = o.item
@@ -87,10 +95,10 @@ class Mem.Finder
         deploy(id, o)
 
   calculate: (query)->
-    @calculate_list query, @query.all._memory
+    @_list query, @query.all._memory
     if query._list.length && @map_reduce?
-      @calculate_reduce query
+      @_reduce query
       if query._distinct?
-        @calculate_group query
-    @calculate_sort query
+        @_group query
+    @_sort query
     return

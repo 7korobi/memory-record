@@ -1,13 +1,23 @@
 type = (o)->
   o?.constructor
 
-def = (obj, key, {get, set})->
-  configurable = false
-  enumerable = false
-  Object.defineProperty obj, key, {configurable, enumerable, get, set}
-  return
+cache_scope = (key, finder, query_call)->
+  switch query_call?.constructor
+    when Function
+      finder.query.all[key] = (args...)->
+        finder.query["#{key}:#{JSON.stringify args}"] ?= query_call args...
+    else
+      finder.query.all[key] = query_call
+
 
 Mem = module.exports
+
+class base_model
+  constructor: (o, m)->
+    o._id = o[m.id] unless o._id
+    o[m.id] = o._id unless o[m.id]
+
+
 class Mem.Rule
   @responses = {}
 
@@ -47,43 +57,24 @@ class Mem.Rule
   remove: f_item f_remove
 
   constructor: (field)->
-    @id = "#{field}_id"
-    @list_name = "#{field}s"
-    @base_obj = {}
+    @model_id   = "#{field}_id"
+    @model_list = "#{field}s"
     @validates = []
     @responses = Mem.Rule.responses[field] ?= []
     @map_reduce = ->
     @protect = ->
-    @deploy = (o)=>
-      o._id = o[@id] unless o._id
-      o[@id] = o._id unless o[@id]
-    @finder = new Mem.Finder (o)-> o._id
-    @finder.name = @list_name
+    @finder = new Mem.Finder ["_id"], ["asc"]
 
     Mem.Collection[field] = @
-    Mem.Query[@list_name] = @finder.query.all
+    Mem.Query[@model_list] = @finder.query.all
 
   schema: (cb)->
-    cache_scope = (key, finder, query_call)->
-      switch type query_call
-        when Function
-          finder.query.all[key] = (args...)->
-            finder.query["#{key}:#{JSON.stringify args}"] ?= query_call args...
-        else
-          finder.query.all[key] = query_call
-
+    model_deploy = []
     definer =
-      sync: (storage, table_name = @list_name)=>
-        @finder.sync = new storage table_name
-
       scope: (cb)=>
         @finder.scope = cb @finder.query.all
         for key, query_call of @finder.scope
           cache_scope(key, @finder, query_call)
-
-      default: (cb)=>
-        for key, val of cb()
-          @base_obj[key] = val
 
       depend_on: (parent)=>
         Mem.Rule.responses[parent] ?= []
@@ -93,17 +84,19 @@ class Mem.Rule
         parents = "#{parent}s"
         parent_id = "#{parent}_id"
 
-        def @base_obj, parent,
-          get: ->
-            Mem.Query[parents].find @[parent_id]
+        model_deploy.push =>
+          Object.defineProperty @model.prototype, parent,
+            get: ->
+              Mem.Query[parents].find @[parent_id]
 
-        dependent = option?.dependent?
+        dependent = option?.dependent
         if dependent
           definer.depend_on parent
-          @validates.push (o)-> o[parent]?
+          @validates.push (o)->
+            o[parent]?
 
       has_many: (children, option)=>
-        key = @id
+        key = @model_id
         all = @finder.query.all
         query = option?.query
 
@@ -111,29 +104,38 @@ class Mem.Rule
           query ?= Mem.Query[children]
           query.where (o)-> o[key] == id
 
-        def @base_obj, children,
-          get: ->
-            all[children](@._id)
+        model_deploy.push =>
+          Object.defineProperty @model.prototype, children,
+            get: ->
+              all[children](@._id)
 
       shuffle: ->
         query = @finder.query.all.shuffle()
         query._memory = @finder.query.all._memory
-        Mem.Query[@list_name] = @finder.query.all = query
+        Mem.Query[@model_list] = @finder.query.all = query
 
-      order: (order)=>
-        query = @finder.query.all.sort false, order
+      order: (sortBy, orderBy)=>
+        query = @finder.query.all.sort sortBy, orderBy
         query._memory = @finder.query.all._memory
-        Mem.Query[@list_name] = @finder.query.all = query
+        Mem.Query[@model_list] = @finder.query.all = query
 
       protect: (keys...)=>
         @protect = (o, old)->
           for key in keys
             o[key] = old[key]
 
-      deploy: (@deploy)=>
       map_reduce: (@map_reduce)=>
 
+      model: base_model
+
     cb.call(definer, @)
+    @model = definer.model
+    @model.id   = @model_id
+    @model.list = @model_list
+    if definer.model == base_model
+      class @model extends @model
+    for deploy in model_deploy
+      deploy()
 
   rehash: (diff)->
     @finder.rehash @responses, diff
@@ -144,10 +146,9 @@ class Mem.Rule
     diff = finder.diff
     all = finder.query.all._memory
 
-    deployer =
-      (o)=>
-        o.__proto__ = @base_obj
-        @deploy o
+    deployer = (o)=>
+      o.__proto__ = @model.prototype
+      @model.call o, o, @model
 
     validate_item = (item)=>
       for validate in @validates

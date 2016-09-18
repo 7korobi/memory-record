@@ -48,11 +48,14 @@ describe "Query", ()->
   it "where in selection", ->
     expect( Query.tests.in(list: "A").pluck("_id") ).to.have.members [10, 20, "news"]
 
+  it "sort defaults", ->
+    expect( Query.tests.sort("_id").pluck("_id").join("-") ).to.eq "10-20-newnews-news"
+
   it "sort ascends", ->
-    expect( Query.tests.sort("asc", "_id").pluck("_id").join("-") ).to.eq "10-20-newnews-news"
+    expect( Query.tests.sort(["_id"],["asc"]).pluck("_id").join("-") ).to.eq "10-20-newnews-news"
 
   it "sort descends", ->
-    expect( Query.tests.sort("desc", "_id").pluck("_id").join("-") ).to.eq "20-10-news-newnews"
+    expect( Query.tests.sort(["_id"],["desc"]).pluck("_id").join("-") ).to.eq "20-10-news-newnews"
 
   it "shuffle", ->
     expect( Query.tests.shuffle().pluck("_id") ).to.have.members [10, 20, "news", "newnews"]

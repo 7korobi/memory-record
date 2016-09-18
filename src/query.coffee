@@ -1,3 +1,5 @@
+_ = require "lodash"
+
 set_for = (list)->
   set = {}
   for key in list
@@ -8,7 +10,7 @@ set_for = (list)->
 
 Mem = module.exports
 class Mem.Query
-  constructor: (@finder, @filters, @type, @sort_by)->
+  constructor: (@finder, @filters, @sortBy, @orderBy)->
 
   _filters: (query, cb)->
     return @ unless query
@@ -22,7 +24,7 @@ class Mem.Query
       else
         console.log [type query, query]
         throw Error 'unimplemented'
-    new Query @finder, filters, @type, @sort_by
+    new Query @finder, filters, @orderBy
 
   in: (query)->
     @_filters query, (target, req)->
@@ -47,7 +49,7 @@ class Mem.Query
           throw Error 'unimplemented'
 
   distinct: (reduce, target)->
-    query = new Query @finder, @filters, @type, @sort_by
+    query = new Query @finder, @filters, @orderBy
     query._distinct = {reduce, target}
     query
 
@@ -79,12 +81,12 @@ class Mem.Query
     regexp = (new RegExp list.join("|"), "ig")
     @where (o)-> (! o.search_words) || regexp.test o.search_words
 
-  sort: (type, sort_by = @sort_by)->
-    return @ if type == @type && sort_by == @sort_by
-    new Query @finder, @filters, type, sort_by
+  sort: (sortBy, orderBy)->
+    return @ if _.isEqual [sortBy, orderBy], [@sortBy, @orderBy]
+    new Query @finder, @filters, sortBy, orderBy
 
   shuffle: ->
-    new Query @finder, @filters, "asc", Math.random
+    new Query @finder, @filters, Math.random
 
   clear: ->
     delete @_reduce
@@ -107,13 +109,12 @@ class Mem.Query
       when 0
         @list.map -> null
       when 1
-        key = keys[0]
         @list.map (o)->
-          o[key]
+          [a] = _.at o, keys
+          a
       else
         @list.map (o)->
-          for key in keys
-            o[key]
+          _.at o, keys
 
   Object.defineProperties @.prototype,
     reduce:
