@@ -1,4 +1,5 @@
 { Collection, Query, Rule } = require("../memory-record.min.js")
+_ = require "lodash"
 
 describe "Collection", ()->
   it "set", ->
@@ -32,4 +33,5 @@ describe "Collection", ()->
         msg: "Merge New World!"
 
     expect( Query.tests.ids ).to.have.members ["10", "20", "news", "newnews"]
+
 

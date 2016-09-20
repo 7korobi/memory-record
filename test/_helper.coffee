@@ -3,6 +3,9 @@
 
 deep_scan_factory = (cb)->
   deep_scan = (base, a, b)->
+    unless a
+      cb base, a, b
+      return
     switch b?.constructor
       when Object
         for key, bb of b

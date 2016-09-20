@@ -5,10 +5,10 @@ class Mem.Finder
   constructor: (@sortBy, @orderBy)->
     all = new Mem.Query @, [], @sortBy, @orderBy
     all._memory = {}
-    @scope = {all}
-    @query = {all}
+    @scope = { all }
+    @query = { all }
 
-  rehash: (rules, diff)->
+  rehash: (rules)->
     delete @query.all._reduce
     delete @query.all._list
     delete @query.all._hash
@@ -16,7 +16,7 @@ class Mem.Finder
       all: @query.all
 
     for rule in rules
-      rule.rehash diff
+      rule.rehash()
     return
 
   _reduce: (query)->
@@ -24,13 +24,13 @@ class Mem.Finder
       o = {}
       o.count = 0 if map.count
       o.all   = 0 if map.all
-      o.push = [] if map.push
+      o.list = [] if map.list
       o.set  = {} if map.set
       o
 
     reduce = (item, o, map)->
-      if map.push
-        o.push.push map.push
+      if map.list
+        o.list.push map.list
       if map.set
         o.set[map.set] = true
       unless map.max <= o.max
@@ -47,26 +47,27 @@ class Mem.Finder
 
     # map_reduce
     base = {}
+    paths = {}
     for id, {item, emits} of query._memory
-      for [keys, last, map] in emits
-        o = base
-        for key in keys
-          o = o[key] ||= {}
-        o = o[last] ||= init map
+      for [path, map] in emits
+        o = _.get base, path
+        unless o
+          o = paths[path.join(".")] = init map 
+          _.set base, path, o
+          o
         reduce item, o, map
-
-    for group, emits of base
-      for key, map of emits
-        calc map
+    for path, o of paths
+      calc o
     query._reduce = base
 
   _sort: (query)->
     { sortBy, orderBy } = query
-    query._list =
-      if orderBy
-        _.orderBy query._list, sortBy, orderBy
-      else
-        _.sortBy query._list, sortBy, orderBy
+    if sortBy?
+      query._list =
+        if orderBy?
+          _.orderBy query._list, sortBy, orderBy
+        else
+          _.sortBy query._list, sortBy
 
 
   _group: (query)->
@@ -88,11 +89,12 @@ class Mem.Finder
     query._hash = {}
     query._list =
       for id, o of all
-        for filters in query.filters
-          o = null unless filters o.item
-          break unless o
-        continue unless o
-        deploy(id, o)
+        every = true
+        for chk in query.filters when ! chk o.item
+          every = false
+          break
+        continue unless every
+        deploy id, o
 
   calculate: (query)->
     @_list query, @query.all._memory

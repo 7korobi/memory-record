@@ -1,5 +1,4 @@
-type = (o)->
-  o?.constructor
+_ = require "lodash"
 
 cache_scope = (key, finder, query_call)->
   switch query_call?.constructor
@@ -10,40 +9,39 @@ cache_scope = (key, finder, query_call)->
       finder.query.all[key] = query_call
 
 
+f_set = (list, parent)->
+  @finder.diff = {}
+  for key, val of @finder.query.all._memory
+    @finder.query.all._memory = {}
+    break
+  @set_base "merge", list, parent
+
+f_merge = (list, parent)->
+  @set_base "merge", list, parent
+
+f_remove = (list)->
+  @set_base false, list, null
+
+f_item = (cb)->
+  (item, parent)->
+    cb.call @, [item], parent
+
+rehash = ->
+  @finder.rehash @responses
+
+
 Mem = module.exports
 
-class base_model
-  constructor: (o, m)->
-    o._id = o[m.id] unless o._id
-    o[m.id] = o._id unless o[m.id]
-
-
 class Mem.Rule
-  @responses = {}
+  @responses: {}
+  class @Model
+    @update: (item, old)->
+    @create: (item)->
+    @delete: (old)->
 
-  f_set = (list, parent)->
-    @finder.diff = {}
-    for key, val of @finder.query.all._memory
-      @finder.query.all._memory = {}
-      @finder.diff.del = true
-      break
-    @set_base "merge", list, parent
-
-  f_merge = (list, parent)->
-    @finder.diff = {}
-    @set_base "merge", list, parent
-
-  f_remove = (list)->
-    @finder.diff = {}
-    @set_base false, list, null
-
-  f_item = (cb)->
-    (item, parent)->
-      switch type item
-        when Object
-          cb.call @, [item], parent
-        else
-          throw Error 'invalid data : #{item}'
+    constructor: (o, m)->
+      o._id = o[m.id] unless o._id
+      o[m.id] = o._id unless o[m.id]
 
   set:   f_set
   reset: f_set
@@ -53,23 +51,24 @@ class Mem.Rule
   reject: f_remove
 
   add:    f_item f_merge
+  append: f_item f_merge
   create: f_item f_merge
   remove: f_item f_remove
 
-  constructor: (field)->
-    @model_id   = "#{field}_id"
-    @model_list = "#{field}s"
-    @validates = []
-    @responses = Mem.Rule.responses[field] ?= []
-    @map_reduce = ->
-    @protect = ->
-    @finder = new Mem.Finder ["_id"], ["asc"]
+  clear_cache: rehash
+  refresh:     rehash
+  rehash:      rehash
 
-    Mem.Collection[field] = @
-    Mem.Query[@model_list] = @finder.query.all
+  constructor: (@field)->
+    @model_id   = "#{@field}_id"
+    @model_list = "#{@field}s"
 
   schema: (cb)->
-    model_deploy = []
+    @responses = Mem.Rule.responses[@field] ?= []
+    @finder = new Mem.Finder "_id"
+    deploys = []
+    @validates = []
+
     definer =
       scope: (cb)=>
         @finder.scope = cb @finder.query.all
@@ -84,7 +83,7 @@ class Mem.Rule
         parents = "#{parent}s"
         parent_id = "#{parent}_id"
 
-        model_deploy.push =>
+        deploys.push =>
           Object.defineProperty @model.prototype, parent,
             get: ->
               Mem.Query[parents].find @[parent_id]
@@ -104,7 +103,7 @@ class Mem.Rule
           query ?= Mem.Query[children]
           query.where (o)-> o[key] == id
 
-        model_deploy.push =>
+        deploys.push =>
           Object.defineProperty @model.prototype, children,
             get: ->
               all[children](@._id)
@@ -124,39 +123,29 @@ class Mem.Rule
           for key in keys
             o[key] = old[key]
 
-      map_reduce: (@map_reduce)=>
-
-      model: base_model
+      model: Mem.Rule.Model
 
     cb.call(definer, @)
     @model = definer.model
     @model.id   = @model_id
     @model.list = @model_list
-    if definer.model == base_model
+    if definer.model == Mem.Rule.Model
       class @model extends @model
-    for deploy in model_deploy
+    for deploy in deploys
       deploy()
 
-  rehash: (diff)->
-    @finder.rehash @responses, diff
-
+    Mem.Model[@field] = @model
+    Mem.Collection[@field] = @
+    Mem.Query[@model_list] = @finder.query.all
+    @
 
   set_base: (mode, from, parent)->
     finder = @finder
-    diff = finder.diff
+    finder.map_reduce = @model.map_reduce?
     all = finder.query.all._memory
 
-    deployer = (o)=>
-      o.__proto__ = @model.prototype
-      @model.call o, o, @model
-
-    validate_item = (item)=>
-      for validate in @validates
-        return false unless validate item
-      true
-
     each = (process)->
-      switch type from
+      switch from?.constructor
         when Array
           for item in from || []
             continue unless item
@@ -173,32 +162,35 @@ class Mem.Rule
         each (item)=>
           for key, val of parent
             item[key] = val
+          item.__proto__ = @model.prototype
+          @model.call item, item, @model
 
-          deployer item
-          return unless validate_item item
+          every = true
+          for chk in @validates when ! chk item
+            every = false
+            break
 
-          o = {item, emits: []}
-          old = all[item._id]
-          if old?
-            @protect item, old.item
-            diff.change = true
-          else
-            diff.add = true
-          all[item._id] = o
+          if every
+            o = { item, emits: [] }
+            old = all[item._id]
+            if old?
+              @model.update item, old
+            else
+              @model.create item
+            all[item._id] = o
 
-          emit = (keys..., last, map)=>
-            finder.map_reduce = true
-            o.emits.push [keys, last, map]
-          @map_reduce o.item, emit
+            if finder.map_reduce
+              emit = (keys..., cmd)=>
+                o.emits.push [keys, cmd]
+              @model.map_reduce item, emit
           return
-
       else
         each (item)=>
           old = all[item._id]
           if old?
-            diff.del = true
+            @model.delete old
             delete all[item._id]
           return
 
-    @rehash(diff)
+    @rehash()
     return

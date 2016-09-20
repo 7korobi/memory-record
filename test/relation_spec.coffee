@@ -18,11 +18,19 @@ describe "Collection", ()->
     Collection.test.set [
       _id: 10
       base_id: 100
-      data: "Hello World!"
+      data: "Hello World! 1"
+    ,
+      _id: 10
+      base_id: 100
+      data: "Hello World! 2"
     ,
       _id: 20
       base_id: 100
       data: "Bye World!"
+    ,
+      _id: 30
+      base_id: 101
+      data: "invalid data"
     ]
 
     expect( Query.tests.pluck("_id") ).to.have.members [10, 20]

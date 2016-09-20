@@ -22,7 +22,7 @@ class Mem.Query
       when Function
         filters.push cb null, query
       else
-        console.log [type query, query]
+        console.log [query, query]
         throw Error 'unimplemented'
     new Query @finder, filters, @orderBy
 
@@ -45,7 +45,7 @@ class Mem.Query
             set = set_for o[target]
             set[req]
         else
-          console.log [req?.constructor, req]
+          console.log [req, req]
           throw Error 'unimplemented'
 
   distinct: (reduce, target)->
