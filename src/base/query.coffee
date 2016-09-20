@@ -9,7 +9,7 @@ set_for = (list)->
 
 
 Mem = module.exports
-class Mem.Query
+class Mem.Base.Query
   constructor: (@finder, @filters, @sortBy, @orderBy)->
 
   _filters: (query, cb)->

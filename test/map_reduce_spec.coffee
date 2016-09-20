@@ -33,7 +33,7 @@ describe "Query", ()->
   it "set", ->
     expect( Query.map_reduce_specs.list.length ).to.eq 100
 
-  have_members "reduce",
+  its "reduce",
     Query.map_reduce_specs.reduce
     full:
       list: chrs "BCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEA"
@@ -89,7 +89,7 @@ describe "Query", ()->
           max_is: Query.map_reduce_specs.hash[100]
           min_is: Query.map_reduce_specs.hash[  5]
 
-  have_members "queried reduce",
+  its "queried reduce",
     Query.map_reduce_specs.where(({_id})-> _id % 2).reduce
     full:
       set:

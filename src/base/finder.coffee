@@ -1,22 +1,19 @@
 _ = require "lodash"
 
 Mem = module.exports
-class Mem.Finder
+class Mem.Base.Finder
   constructor: (@sortBy, @orderBy)->
-    all = new Mem.Query @, [], @sortBy, @orderBy
+    all = new Mem.Base.Query @, [], @sortBy, @orderBy
     all._memory = {}
     @scope = { all }
     @query = { all }
 
-  rehash: (rules)->
+  rehash: ->
     delete @query.all._reduce
     delete @query.all._list
     delete @query.all._hash
     @query =
       all: @query.all
-
-    for rule in rules
-      rule.rehash()
     return
 
   _reduce: (query)->

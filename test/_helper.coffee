@@ -18,7 +18,7 @@ deep_scan_factory = (cb)->
       else
         cb base, a, b
 
-global.have_members = (word, val, obj)->
+global.its = (word, val, obj)->
   deep_equal = deep_scan_factory (key, a, b)->
     it key, ->
       expect(a).to.eq b

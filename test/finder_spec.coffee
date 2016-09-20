@@ -16,11 +16,11 @@ describe "Query", ()->
     data:
       msg: "Merge World!"
 
-  have_members "ids",
+  its "ids",
     Query.finders.ids
     ["10", "30", "news"]
 
-  have_members "list",
+  its "list",
     Query.finders.list
     [
       _id:     10
@@ -39,7 +39,7 @@ describe "Query", ()->
         msg: "Merge World!"
     ]
 
-  have_members "hash",
+  its "hash",
     Query.finders.hash
     10:
       _id:     10
