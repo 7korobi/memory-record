@@ -1,7 +1,7 @@
 {
   "name": "memory-record",
   "description": "activerecord like in-memory data manager",
-  "version": "0.2.1",
+  "version": "0.2.6",
   "author": "7korobi <7korobi@gmail.com>",
   "repository": {
     "type": "git",

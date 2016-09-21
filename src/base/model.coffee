@@ -1,6 +1,7 @@
 
 Mem = module.exports
 class Mem.Base.Model
+  @rowid = 0
   @update: (item, old)->
   @create: (item)->
   @delete: (old)->

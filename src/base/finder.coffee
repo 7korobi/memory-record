@@ -46,7 +46,7 @@ class Mem.Base.Finder
 
   calculate: (query)->
     @list query, @query.all._memory
-    if query._list.length && @map_reduce?
+    if query._list.length && @model.map_reduce?
       @reduce query
       if query._distinct?
         @group query
@@ -154,7 +154,6 @@ class Mem.Base.Finder
         model.delete old
     @rehash()
 
-
   merge: (from, parent)->
     { _memory } = @query.all
     each from, (item)=>
@@ -162,6 +161,7 @@ class Mem.Base.Finder
         item[key] = val
       item.__proto__ = @model.prototype
       @model.call item, item, @model
+      @model.rowid++
 
       every = true
       for chk in @validates when ! chk item
@@ -177,7 +177,7 @@ class Mem.Base.Finder
           @model.create item
         _memory[item._id] = o
 
-        if @map_reduce
+        if @model.map_reduce?
           emit = (keys..., cmd)=>
             o.emits.push [keys, cmd]
           @model.map_reduce item, emit

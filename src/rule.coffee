@@ -22,7 +22,6 @@ class Mem.Rule
     if @model == Mem.Base.Model
       class @model extends @model
 
-    @finder.map_reduce = @model.map_reduce?
     for init in @inits
       init()
 

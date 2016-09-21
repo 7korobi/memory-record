@@ -1,4 +1,4 @@
-{Collection, Query, Rule} = require("../memory-record.min.js")
+{Collection, Query, Rule} = require("../memory-record.js")
 
 describe "Collection", ()->
   it "set", ->

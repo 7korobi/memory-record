@@ -1,6 +1,6 @@
 /**
  memory-record - activerecord like in-memory data manager
- @version v0.2.1
+ @version v0.2.6
  @link https://github.com/7korobi/memory-record
  @license 
 **/
@@ -195,7 +195,7 @@
 
     Finder.prototype.calculate = function(query) {
       this.list(query, this.query.all._memory);
-      if (query._list.length && (this.map_reduce != null)) {
+      if (query._list.length && (this.model.map_reduce != null)) {
         this.reduce(query);
         if (query._distinct != null) {
           this.group(query);
@@ -379,6 +379,7 @@
           }
           item.__proto__ = _this.model.prototype;
           _this.model.call(item, item, _this.model);
+          _this.model.rowid++;
           every = true;
           ref = _this.validates;
           for (i = 0, len = ref.length; i < len; i++) {
@@ -401,7 +402,7 @@
               _this.model.create(item);
             }
             _memory[item._id] = o;
-            if (_this.map_reduce) {
+            if (_this.model.map_reduce != null) {
               emit = function() {
                 var cmd, j, keys;
                 keys = 2 <= arguments.length ? slice.call(arguments, 0, j = arguments.length - 1) : (j = 0, []), cmd = arguments[j++];
@@ -427,6 +428,8 @@
   Mem = module.exports;
 
   Mem.Base.Model = (function() {
+    Model.rowid = 0;
+
     Model.update = function(item, old) {};
 
     Model.create = function(item) {};
@@ -625,6 +628,7 @@
       if (_.isEqual([sortBy, orderBy], [this.sortBy, this.orderBy])) {
         return this;
       }
+      console.warn([sortBy, orderBy]);
       return new Query(this.finder, this.filters, sortBy, orderBy);
     };
 
@@ -765,7 +769,6 @@
 
         })(this.model);
       }
-      this.finder.map_reduce = this.model.map_reduce != null;
       ref = this.inits;
       for (i = 0, len = ref.length; i < len; i++) {
         init = ref[i];

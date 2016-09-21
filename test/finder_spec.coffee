@@ -1,4 +1,4 @@
-{Collection, Query, Rule} = require("../memory-record.min.js")
+{Collection, Query, Rule} = require("../memory-record.js")
 
 describe "Query", ()->
   new Rule("finder").schema ->
@@ -16,9 +16,9 @@ describe "Query", ()->
     data:
       msg: "Merge World!"
 
-  its "ids",
-    Query.finders.ids
-    ["10", "30", "news"]
+  it "ids", ->
+    expect( Query.finders.ids )
+    .to.deep.eq ["10", "30", "news"]
 
   its "list",
     Query.finders.list

@@ -23,3 +23,11 @@ global.its = (word, val, obj)->
     it key, ->
       expect(a).to.eq b
   deep_equal word, val, obj
+
+ChaiJS = require 'chai'
+ChaiJS.Assertion.addMethod 'same', (val)->
+  deep_equal = deep_scan_factory (key, a, b)->
+    new ChaiJS.Assertion(a).to.eq b
+  deep_equal "", val, @
+
+global.expect = ChaiJS.expect
