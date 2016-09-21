@@ -46,38 +46,22 @@
 }).call(this);
 
 (function() {
-  var Mem, OBJ, f_composite, f_item, f_merge, f_remove, f_set,
-    slice = [].slice;
+  var Mem, OBJ, f_composite, f_item, f_merge, f_remove, f_reset;
 
   OBJ = function() {
     return new Object(null);
   };
 
-  f_set = function(list, parent) {
-    var _memory, finder, item, key, model, old, ref, results;
-    ref = this.rule, finder = ref.finder, model = ref.model;
-    _memory = finder.query.all._memory;
-    finder.query.all._memory = OBJ();
-    this.set_base("merge", list, parent);
-    results = [];
-    for (key in _memory) {
-      old = _memory[key];
-      item = finder.query.all._memory[key];
-      if (item != null) {
-        results.push(model.update(item, old));
-      } else {
-        results.push(model["delete"](old));
-      }
-    }
-    return results;
+  f_reset = function(list, parent) {
+    return this.rule.finder.reset(list, parent);
   };
 
   f_merge = function(list, parent) {
-    return this.set_base("merge", list, parent);
+    return this.rule.finder.merge(list, parent);
   };
 
   f_remove = function(list) {
-    return this.set_base(false, list, null);
+    return this.rule.finder.remove(list);
   };
 
   f_item = function(cb) {
@@ -87,15 +71,15 @@
   };
 
   f_composite = function() {
-    return this.rule.composite();
+    return this.rule.finder.rehash();
   };
 
   Mem = module.exports;
 
   Mem.Base.Collection = (function() {
-    Collection.prototype.set = f_set;
+    Collection.prototype.set = f_reset;
 
-    Collection.prototype.reset = f_set;
+    Collection.prototype.reset = f_reset;
 
     Collection.prototype.merge = f_merge;
 
@@ -120,95 +104,6 @@
       this.validates = [];
     }
 
-    Collection.prototype.set_base = function(mode, from, parent) {
-      var all, each, finder, model, ref;
-      ref = this.rule, finder = ref.finder, model = ref.model;
-      all = finder.query.all._memory;
-      each = function(process) {
-        var i, id, item, len, ref1, ref2;
-        switch (from != null ? from.constructor : void 0) {
-          case Array:
-            ref1 = from || [];
-            for (i = 0, len = ref1.length; i < len; i++) {
-              item = ref1[i];
-              if (!item) {
-                continue;
-              }
-              process(item);
-            }
-            break;
-          case Object:
-            ref2 = from || {};
-            for (id in ref2) {
-              item = ref2[id];
-              if (!item) {
-                continue;
-              }
-              item._id = id;
-              process(item);
-            }
-        }
-      };
-      switch (mode) {
-        case "merge":
-          each((function(_this) {
-            return function(item) {
-              var chk, emit, every, i, key, len, o, old, ref1, val;
-              for (key in parent) {
-                val = parent[key];
-                item[key] = val;
-              }
-              item.__proto__ = model.prototype;
-              model.call(item, item, model);
-              every = true;
-              ref1 = _this.validates;
-              for (i = 0, len = ref1.length; i < len; i++) {
-                chk = ref1[i];
-                if (!(!chk(item))) {
-                  continue;
-                }
-                every = false;
-                break;
-              }
-              if (every) {
-                o = {
-                  item: item,
-                  emits: []
-                };
-                old = all[item._id];
-                if (old != null) {
-                  model.update(item, old);
-                } else {
-                  model.create(item);
-                }
-                all[item._id] = o;
-                if (finder.map_reduce) {
-                  emit = function() {
-                    var cmd, j, keys;
-                    keys = 2 <= arguments.length ? slice.call(arguments, 0, j = arguments.length - 1) : (j = 0, []), cmd = arguments[j++];
-                    return o.emits.push([keys, cmd]);
-                  };
-                  model.map_reduce(item, emit);
-                }
-              }
-            };
-          })(this));
-          break;
-        default:
-          each((function(_this) {
-            return function(item) {
-              var old;
-              old = all[item._id];
-              if (old != null) {
-                model["delete"](old);
-                delete all[item._id];
-              }
-            };
-          })(this));
-      }
-      this.clear_cache();
-    };
-
     return Collection;
 
   })();
@@ -216,7 +111,7 @@
 }).call(this);
 
 (function() {
-  var Mem, OBJ, _,
+  var Mem, OBJ, _, each,
     slice = [].slice;
 
   _ = require("lodash");
@@ -225,11 +120,38 @@
     return new Object(null);
   };
 
+  each = function(from, process) {
+    var i, id, item, len, ref, ref1;
+    switch (from != null ? from.constructor : void 0) {
+      case Array:
+        ref = from || [];
+        for (i = 0, len = ref.length; i < len; i++) {
+          item = ref[i];
+          if (!item) {
+            continue;
+          }
+          process(item);
+        }
+        break;
+      case Object:
+        ref1 = from || {};
+        for (id in ref1) {
+          item = ref1[id];
+          if (!item) {
+            continue;
+          }
+          item._id = id;
+          process(item);
+        }
+    }
+  };
+
   Mem = module.exports;
 
   Mem.Base.Finder = (function() {
-    function Finder(sortBy1, orderBy1) {
+    function Finder(model1, sortBy1, orderBy1) {
       var all;
+      this.model = model1;
       this.sortBy = sortBy1;
       this.orderBy = orderBy1;
       all = new Mem.Base.Query(this, [], this.sortBy, this.orderBy);
@@ -240,8 +162,12 @@
       this.query = {
         all: all
       };
-      this.cache = new WeakMap;
+      this.validates = [];
     }
+
+    Finder.prototype.validate = function(cb) {
+      return this.validates.push(cb);
+    };
 
     Finder.prototype.use_cache = function(key, query_call) {
       switch (query_call != null ? query_call.constructor : void 0) {
@@ -267,7 +193,18 @@
       };
     };
 
-    Finder.prototype._reduce = function(query) {
+    Finder.prototype.calculate = function(query) {
+      this.list(query, this.query.all._memory);
+      if (query._list.length && (this.map_reduce != null)) {
+        this.reduce(query);
+        if (query._distinct != null) {
+          this.group(query);
+        }
+      }
+      this.sort(query);
+    };
+
+    Finder.prototype.reduce = function(query) {
       var base, calc, emits, i, id, init, item, len, map, o, path, paths, reduce, ref, ref1, ref2;
       init = function(map) {
         var o;
@@ -336,7 +273,7 @@
       return query._reduce = base;
     };
 
-    Finder.prototype._sort = function(query) {
+    Finder.prototype.sort = function(query) {
       var orderBy, sortBy;
       sortBy = query.sortBy, orderBy = query.orderBy;
       if (sortBy != null) {
@@ -344,7 +281,7 @@
       }
     };
 
-    Finder.prototype._group = function(query) {
+    Finder.prototype.group = function(query) {
       var id, o, reduce, ref, target;
       ref = query._distinct, reduce = ref.reduce, target = ref.target;
       return query._list = (function() {
@@ -359,7 +296,7 @@
       })();
     };
 
-    Finder.prototype._list = function(query, all) {
+    Finder.prototype.list = function(query, all) {
       var chk, deploy, every, id, o;
       if (query._memory === all) {
         deploy = function(id, o) {
@@ -397,15 +334,85 @@
       })();
     };
 
-    Finder.prototype.calculate = function(query) {
-      this._list(query, this.query.all._memory);
-      if (query._list.length && (this.map_reduce != null)) {
-        this._reduce(query);
-        if (query._distinct != null) {
-          this._group(query);
+    Finder.prototype.remove = function(from) {
+      var _memory;
+      _memory = this.query.all._memory;
+      each(from, (function(_this) {
+        return function(item) {
+          var old;
+          old = _memory[item._id];
+          if (old != null) {
+            _this.model["delete"](old);
+            delete _memory[item._id];
+          }
+        };
+      })(this));
+      return this.rehash();
+    };
+
+    Finder.prototype.reset = function(from, parent) {
+      var _memory, item, key, news, old;
+      _memory = this.query.all._memory;
+      this.query.all._memory = news = OBJ();
+      this.merge(from, parent);
+      for (key in _memory) {
+        old = _memory[key];
+        item = news[key];
+        if (item != null) {
+          model.update(item, old);
+        } else {
+          model["delete"](old);
         }
       }
-      this._sort(query);
+      return this.rehash();
+    };
+
+    Finder.prototype.merge = function(from, parent) {
+      var _memory;
+      _memory = this.query.all._memory;
+      each(from, (function(_this) {
+        return function(item) {
+          var chk, emit, every, i, key, len, o, old, ref, val;
+          for (key in parent) {
+            val = parent[key];
+            item[key] = val;
+          }
+          item.__proto__ = _this.model.prototype;
+          _this.model.call(item, item, _this.model);
+          every = true;
+          ref = _this.validates;
+          for (i = 0, len = ref.length; i < len; i++) {
+            chk = ref[i];
+            if (!(!chk(item))) {
+              continue;
+            }
+            every = false;
+            break;
+          }
+          if (every) {
+            o = {
+              item: item,
+              emits: []
+            };
+            old = _memory[item._id];
+            if (old != null) {
+              _this.model.update(item, old);
+            } else {
+              _this.model.create(item);
+            }
+            _memory[item._id] = o;
+            if (_this.map_reduce) {
+              emit = function() {
+                var cmd, j, keys;
+                keys = 2 <= arguments.length ? slice.call(arguments, 0, j = arguments.length - 1) : (j = 0, []), cmd = arguments[j++];
+                return o.emits.push([keys, cmd]);
+              };
+              _this.model.map_reduce(item, emit);
+            }
+          }
+        };
+      })(this));
+      return this.rehash();
     };
 
     return Finder;
@@ -721,9 +728,9 @@
 
 (function() {
   var Mem, _,
-    slice = [].slice,
     extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
-    hasProp = {}.hasOwnProperty;
+    hasProp = {}.hasOwnProperty,
+    slice = [].slice;
 
   _ = require("lodash");
 
@@ -735,7 +742,40 @@
       this.model_id = this.field + "_id";
       this.model_list = this.field + "s";
       this.depend_on(this.field);
+      this.finder = new Mem.Base.Finder("_id");
+      this.model = Mem.Base.Model;
+      this.dml = new Mem.Base.Collection(this);
+      this.inits = [];
     }
+
+    Rule.prototype.schema = function(cb) {
+      var i, init, len, ref;
+      cb.call(this, this.dml);
+      this.model.id = this.model_id;
+      this.model.list = this.model_list;
+      if (this.model === Mem.Base.Model) {
+        this.model = (function(superClass) {
+          extend(model, superClass);
+
+          function model() {
+            return model.__super__.constructor.apply(this, arguments);
+          }
+
+          return model;
+
+        })(this.model);
+      }
+      this.finder.map_reduce = this.model.map_reduce != null;
+      ref = this.inits;
+      for (i = 0, len = ref.length; i < len; i++) {
+        init = ref[i];
+        init();
+      }
+      Mem.Model[this.field] = this.finder.model = this.model;
+      Mem.Collection[this.field] = this.dml;
+      Mem.Query[this.model_list] = this.finder.query.all;
+      return this;
+    };
 
     Rule.prototype.composite = function() {
       var f, i, len, ref;
@@ -772,7 +812,7 @@
       var dependent, parent_id, parents;
       parents = parent + "s";
       parent_id = parent + "_id";
-      this.deploys.push((function(_this) {
+      this.inits.push((function(_this) {
         return function() {
           return Object.defineProperty(_this.model.prototype, parent, {
             get: function() {
@@ -784,7 +824,7 @@
       dependent = option != null ? option.dependent : void 0;
       if (dependent) {
         this.depend_on(parent);
-        return this.dml.validates.push(function(o) {
+        return this.finder.validate(function(o) {
           return o[parent] != null;
         });
       }
@@ -803,7 +843,7 @@
           return o[key] === id;
         });
       });
-      return this.deploys.push((function(_this) {
+      return this.inits.push((function(_this) {
         return function() {
           return Object.defineProperty(_this.model.prototype, children, {
             get: function() {
@@ -840,40 +880,6 @@
         }
         return results;
       };
-    };
-
-    Rule.prototype.schema = function(cb) {
-      var deploy, i, len, ref;
-      this.finder = new Mem.Base.Finder("_id");
-      this.model = Mem.Base.Model;
-      this.dml = new Mem.Base.Collection(this);
-      this.deploys = [];
-      cb.call(this, this.dml);
-      this.model.id = this.model_id;
-      this.model.list = this.model_list;
-      if (this.model === Mem.Base.Model) {
-        this.model = (function(superClass) {
-          extend(model, superClass);
-
-          function model() {
-            return model.__super__.constructor.apply(this, arguments);
-          }
-
-          return model;
-
-        })(this.model);
-      }
-      this.dml.model = this.model;
-      this.finder.map_reduce = this.model.map_reduce != null;
-      ref = this.deploys;
-      for (i = 0, len = ref.length; i < len; i++) {
-        deploy = ref[i];
-        deploy();
-      }
-      Mem.Model[this.field] = this.model;
-      Mem.Collection[this.field] = this.dml;
-      Mem.Query[this.model_list] = this.finder.query.all;
-      return this;
     };
 
     return Rule;

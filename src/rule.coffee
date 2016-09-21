@@ -9,6 +9,28 @@ class Mem.Rule
     @model_list = "#{@field}s"
     @depend_on @field
 
+    @finder = new Mem.Base.Finder "_id"
+    @model = Mem.Base.Model
+
+    @dml = new Mem.Base.Collection @
+    @inits = []
+
+  schema: (cb)->
+    cb.call @, @dml
+    @model.id   = @model_id
+    @model.list = @model_list
+    if @model == Mem.Base.Model
+      class @model extends @model
+
+    @finder.map_reduce = @model.map_reduce?
+    for init in @inits
+      init()
+
+    Mem.Model[@field] = @finder.model = @model
+    Mem.Collection[@field] = @dml
+    Mem.Query[@model_list] = @finder.query.all
+    @
+
   composite: ->
     for f in Mem.Composite[@field]
       f()
@@ -28,7 +50,7 @@ class Mem.Rule
     parents = "#{parent}s"
     parent_id = "#{parent}_id"
 
-    @deploys.push =>
+    @inits.push =>
       Object.defineProperty @model.prototype, parent,
         get: ->
           Mem.Query[parents].find @[parent_id]
@@ -36,7 +58,7 @@ class Mem.Rule
     dependent = option?.dependent
     if dependent
       @depend_on parent
-      @dml.validates.push (o)->
+      @finder.validate (o)->
         o[parent]?
 
   has_many: (children, option)->
@@ -48,7 +70,7 @@ class Mem.Rule
       query ?= Mem.Query[children]
       query.where (o)-> o[key] == id
 
-    @deploys.push =>
+    @inits.push =>
       Object.defineProperty @model.prototype, children,
         get: ->
           all[children](@._id)
@@ -67,28 +89,4 @@ class Mem.Rule
     @protect = (o, old)->
       for key in keys
         o[key] = old[key]
-
-
-  schema: (cb)->
-    @finder = new Mem.Base.Finder "_id"
-    @model = Mem.Base.Model
-
-    @dml = new Mem.Base.Collection @
-    @deploys = []
-
-    cb.call @, @dml
-    @model.id   = @model_id
-    @model.list = @model_list
-    if @model == Mem.Base.Model
-      class @model extends @model
-
-    @dml.model = @model
-    @finder.map_reduce = @model.map_reduce?
-    for deploy in @deploys
-      deploy()
-
-    Mem.Model[@field] = @model
-    Mem.Collection[@field] = @dml
-    Mem.Query[@model_list] = @finder.query.all
-    @
 

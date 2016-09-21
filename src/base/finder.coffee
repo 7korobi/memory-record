@@ -3,15 +3,30 @@ _ = require "lodash"
 OBJ = ->
   new Object null
 
+each = (from, process)->
+  switch from?.constructor
+    when Array
+      for item in from || []
+        continue unless item
+        process(item)
+    when Object
+      for id, item of from || {}
+        continue unless item
+        item._id = id
+        process(item)
+  return
 
 Mem = module.exports
 class Mem.Base.Finder
-  constructor: (@sortBy, @orderBy)->
+  constructor: (@model, @sortBy, @orderBy)->
     all = new Mem.Base.Query @, [], @sortBy, @orderBy
     all._memory = OBJ()
     @scope = { all }
     @query = { all }
-    @cache = new WeakMap
+    @validates = []
+
+  validate: (cb)->
+    @validates.push cb
 
   use_cache: (key, query_call)->
     switch query_call?.constructor
@@ -21,7 +36,6 @@ class Mem.Base.Finder
       else
         @query.all[key] = query_call
 
-
   rehash: ->
     delete @query.all._reduce
     delete @query.all._list
@@ -30,7 +44,16 @@ class Mem.Base.Finder
       all: @query.all
     return
 
-  _reduce: (query)->
+  calculate: (query)->
+    @list query, @query.all._memory
+    if query._list.length && @map_reduce?
+      @reduce query
+      if query._distinct?
+        @group query
+    @sort query
+    return
+
+  reduce: (query)->
     init = (map)->
       o = OBJ()
       o.count = 0 if map.count
@@ -71,7 +94,7 @@ class Mem.Base.Finder
       calc o
     query._reduce = base
 
-  _sort: (query)->
+  sort: (query)->
     { sortBy, orderBy } = query
     if sortBy?
       query._list =
@@ -81,13 +104,13 @@ class Mem.Base.Finder
           _.sortBy query._list, sortBy
 
 
-  _group: (query)->
+  group: (query)->
     { reduce, target } = query._distinct
     query._list =
       for id, o of query._reduce[reduce]
         o[target]
 
-  _list: (query, all)->
+  list: (query, all)->
     if query._memory == all
       deploy = (id, o)->
         query._hash[id] = o.item
@@ -107,11 +130,57 @@ class Mem.Base.Finder
         continue unless every
         deploy id, o
 
-  calculate: (query)->
-    @_list query, @query.all._memory
-    if query._list.length && @map_reduce?
-      @_reduce query
-      if query._distinct?
-        @_group query
-    @_sort query
-    return
+
+  remove: (from)->
+    { _memory } = @query.all
+    each from, (item)=>
+      old = _memory[item._id]
+      if old?
+        @model.delete old
+        delete _memory[item._id]
+      return
+    @rehash()
+
+  reset: (from, parent)->
+    { _memory } = @query.all
+    @query.all._memory = news = OBJ()
+    @merge from, parent
+
+    for key, old of _memory 
+      item = news[key]
+      if item?
+        model.update item, old
+      else
+        model.delete old
+    @rehash()
+
+
+  merge: (from, parent)->
+    { _memory } = @query.all
+    each from, (item)=>
+      for key, val of parent
+        item[key] = val
+      item.__proto__ = @model.prototype
+      @model.call item, item, @model
+
+      every = true
+      for chk in @validates when ! chk item
+        every = false
+        break
+
+      if every
+        o = { item, emits: [] }
+        old = _memory[item._id]
+        if old?
+          @model.update item, old
+        else
+          @model.create item
+        _memory[item._id] = o
+
+        if @map_reduce
+          emit = (keys..., cmd)=>
+            o.emits.push [keys, cmd]
+          @model.map_reduce item, emit
+      return
+    @rehash()
+

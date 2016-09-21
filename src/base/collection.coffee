@@ -2,36 +2,26 @@
 OBJ = ->
   new Object null
 
-f_set = (list, parent)->
-  { finder, model } = @rule
-  { _memory } = finder.query.all
-  finder.query.all._memory = OBJ()
-  @set_base "merge", list, parent
-
-  for key, old of _memory 
-    item = finder.query.all._memory[key]
-    if item?
-      model.update item, old
-    else
-      model.delete old
+f_reset = (list, parent)->
+  @rule.finder.reset list, parent
 
 f_merge = (list, parent)->
-  @set_base "merge", list, parent
+  @rule.finder.merge list, parent
 
 f_remove = (list)->
-  @set_base false, list, null
+  @rule.finder.remove list
 
 f_item = (cb)->
   (item, parent)->
     cb.call @, [item], parent
 
 f_composite = ->
-  @rule.composite()
+  @rule.finder.rehash()
 
 Mem = module.exports
 class Mem.Base.Collection
-  set:   f_set
-  reset: f_set
+  set:    f_reset
+  reset:  f_reset
 
   merge:  f_merge
 
@@ -49,57 +39,3 @@ class Mem.Base.Collection
   constructor: (@rule)->
     @validates = []
 
-  set_base: (mode, from, parent)->
-    { finder, model } = @rule
-    all = finder.query.all._memory
-
-    each = (process)->
-      switch from?.constructor
-        when Array
-          for item in from || []
-            continue unless item
-            process(item)
-        when Object
-          for id, item of from || {}
-            continue unless item
-            item._id = id
-            process(item)
-      return
-
-    switch mode
-      when "merge"
-        each (item)=>
-          for key, val of parent
-            item[key] = val
-          item.__proto__ = model.prototype
-          model.call item, item, model
-
-          every = true
-          for chk in @validates when ! chk item
-            every = false
-            break
-
-          if every
-            o = { item, emits: [] }
-            old = all[item._id]
-            if old?
-              model.update item, old
-            else
-              model.create item
-            all[item._id] = o
-
-            if finder.map_reduce
-              emit = (keys..., cmd)=>
-                o.emits.push [keys, cmd]
-              model.map_reduce item, emit
-          return
-      else
-        each (item)=>
-          old = all[item._id]
-          if old?
-            model.delete old
-            delete all[item._id]
-          return
-
-    @clear_cache()
-    return
