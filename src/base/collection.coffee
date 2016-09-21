@@ -1,8 +1,11 @@
 
+OBJ = ->
+  new Object null
+
 f_set = (list, parent)->
   { finder, model } = @rule
   { _memory } = finder.query.all
-  finder.query.all._memory = {}
+  finder.query.all._memory = OBJ()
   @set_base "merge", list, parent
 
   for key, old of _memory 

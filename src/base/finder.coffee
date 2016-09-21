@@ -1,12 +1,26 @@
 _ = require "lodash"
 
+OBJ = ->
+  new Object null
+
+
 Mem = module.exports
 class Mem.Base.Finder
   constructor: (@sortBy, @orderBy)->
     all = new Mem.Base.Query @, [], @sortBy, @orderBy
-    all._memory = {}
+    all._memory = OBJ()
     @scope = { all }
     @query = { all }
+    @cache = new WeakMap
+
+  use_cache: (key, query_call)->
+    switch query_call?.constructor
+      when Function
+        @query.all[key] = (args...)=>
+          @query.all["#{key}:#{JSON.stringify args}"] ?= query_call args...
+      else
+        @query.all[key] = query_call
+
 
   rehash: ->
     delete @query.all._reduce
@@ -18,11 +32,11 @@ class Mem.Base.Finder
 
   _reduce: (query)->
     init = (map)->
-      o = {}
+      o = OBJ()
       o.count = 0 if map.count
       o.all   = 0 if map.all
       o.list = [] if map.list
-      o.set  = {} if map.set
+      o.set  = OBJ() if map.set
       o
 
     reduce = (item, o, map)->
@@ -43,8 +57,8 @@ class Mem.Base.Finder
       o.avg = o.all / o.count if o.all && o.count
 
     # map_reduce
-    base = {}
-    paths = {}
+    base = OBJ()
+    paths = OBJ()
     for id, {item, emits} of query._memory
       for [path, map] in emits
         o = _.get base, path
@@ -78,12 +92,12 @@ class Mem.Base.Finder
       deploy = (id, o)->
         query._hash[id] = o.item
     else
-      query._memory = {}
+      query._memory = OBJ()
       deploy = (id, o)->
         query._memory[id] = o
         query._hash[id] = o.item
 
-    query._hash = {}
+    query._hash = OBJ()
     query._list =
       for id, o of all
         every = true

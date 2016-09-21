@@ -1,3 +1,7 @@
+
+OBJ = ->
+  new Object null
+
 serial = null
 base = (code)->
   serial =
@@ -18,7 +22,7 @@ textfy = (cb)->
       when "", null, undefined
         ""
       else
-        cb(val)
+        cb val
 
 string_parser = string_serializer = textfy String
 symbol_parser = textfy decodeURI
@@ -42,7 +46,7 @@ pack =
 
   Keys: (val)->
     list =
-      if Array.isArray(val)
+      if Array.isArray val
         val
       else
         for key, item of val
@@ -51,10 +55,10 @@ pack =
     pack.Array list.sort()
 
   Array: (val)->
-    if Array.isArray(val)
+    if Array.isArray val
       val.join ","
     else
-      string_parser(val)
+      string_parser val
 
   Date: (val)->
     time = Math.floor val
@@ -88,14 +92,14 @@ unpack =
       <script.*?>([\s\S]*?)</script>
     ///ig
     codes = []
-    while script = pattern.exec(html)
+    while script = pattern.exec html
       codes.push script[1]
     new Function "window", codes.join "\n"
 
   Keys: (val)->
-    hash = {}
+    hash = OBJ()
     if val.length
-      list = array_base_parser(val)
+      list = array_base_parser val
       for key in list
         hash[key] = true
     else
@@ -104,7 +108,7 @@ unpack =
     hash
 
   Array: (val)->
-    array_base_parser(val)
+    array_base_parser val
 
   Date: (code)->
     return code if 0 < code
@@ -143,7 +147,7 @@ Serial =
       Serial.ID.at _.now()
     at: (date, count)->
       count ?= Math.random() * patch_size
-      pack.Date(date * patch_size + count)
+      pack.Date date * patch_size + count
 
 escaped = "([^\\~\\/\\=\\.\\&\\[\\]\\(\\)\\\"\\'\\`\\;]*)"
 for key, func of unpack

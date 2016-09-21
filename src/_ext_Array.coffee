@@ -1,6 +1,4 @@
 
-{ sort } = []
-
 # configurable: false
 # enumerable: false
 # writable: false

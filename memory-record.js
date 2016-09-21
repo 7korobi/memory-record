@@ -7,10 +7,6 @@
 
 
 (function() {
-  var sort;
-
-  sort = [].sort;
-
   Object.defineProperties(Array.prototype, {
     first: {
       get: function() {
@@ -50,14 +46,18 @@
 }).call(this);
 
 (function() {
-  var Mem, f_composite, f_item, f_merge, f_remove, f_set,
+  var Mem, OBJ, f_composite, f_item, f_merge, f_remove, f_set,
     slice = [].slice;
+
+  OBJ = function() {
+    return new Object(null);
+  };
 
   f_set = function(list, parent) {
     var _memory, finder, item, key, model, old, ref, results;
     ref = this.rule, finder = ref.finder, model = ref.model;
     _memory = finder.query.all._memory;
-    finder.query.all._memory = {};
+    finder.query.all._memory = OBJ();
     this.set_base("merge", list, parent);
     results = [];
     for (key in _memory) {
@@ -216,9 +216,14 @@
 }).call(this);
 
 (function() {
-  var Mem, _;
+  var Mem, OBJ, _,
+    slice = [].slice;
 
   _ = require("lodash");
+
+  OBJ = function() {
+    return new Object(null);
+  };
 
   Mem = module.exports;
 
@@ -228,14 +233,30 @@
       this.sortBy = sortBy1;
       this.orderBy = orderBy1;
       all = new Mem.Base.Query(this, [], this.sortBy, this.orderBy);
-      all._memory = {};
+      all._memory = OBJ();
       this.scope = {
         all: all
       };
       this.query = {
         all: all
       };
+      this.cache = new WeakMap;
     }
+
+    Finder.prototype.use_cache = function(key, query_call) {
+      switch (query_call != null ? query_call.constructor : void 0) {
+        case Function:
+          return this.query.all[key] = (function(_this) {
+            return function() {
+              var args, base1, name;
+              args = 1 <= arguments.length ? slice.call(arguments, 0) : [];
+              return (base1 = _this.query.all)[name = key + ":" + (JSON.stringify(args))] != null ? base1[name] : base1[name] = query_call.apply(null, args);
+            };
+          })(this);
+        default:
+          return this.query.all[key] = query_call;
+      }
+    };
 
     Finder.prototype.rehash = function() {
       delete this.query.all._reduce;
@@ -250,7 +271,7 @@
       var base, calc, emits, i, id, init, item, len, map, o, path, paths, reduce, ref, ref1, ref2;
       init = function(map) {
         var o;
-        o = {};
+        o = OBJ();
         if (map.count) {
           o.count = 0;
         }
@@ -261,7 +282,7 @@
           o.list = [];
         }
         if (map.set) {
-          o.set = {};
+          o.set = OBJ();
         }
         return o;
       };
@@ -292,8 +313,8 @@
           return o.avg = o.all / o.count;
         }
       };
-      base = {};
-      paths = {};
+      base = OBJ();
+      paths = OBJ();
       ref = query._memory;
       for (id in ref) {
         ref1 = ref[id], item = ref1.item, emits = ref1.emits;
@@ -345,13 +366,13 @@
           return query._hash[id] = o.item;
         };
       } else {
-        query._memory = {};
+        query._memory = OBJ();
         deploy = function(id, o) {
           query._memory[id] = o;
           return query._hash[id] = o.item;
         };
       }
-      query._hash = {};
+      query._hash = OBJ();
       return query._list = (function() {
         var i, len, ref, results;
         results = [];
@@ -421,14 +442,18 @@
 }).call(this);
 
 (function() {
-  var Mem, _, set_for,
+  var Mem, OBJ, _, set_for,
     slice = [].slice;
 
   _ = require("lodash");
 
+  OBJ = function() {
+    return new Object(null);
+  };
+
   set_for = function(list) {
     var i, key, len, set;
-    set = {};
+    set = OBJ();
     for (i = 0, len = list.length; i < len; i++) {
       key = list[i];
       set[key] = true;
@@ -685,25 +710,12 @@
 }).call(this);
 
 (function() {
-  var Mem, _, cache_scope,
+  var Mem, _,
     slice = [].slice,
     extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
     hasProp = {}.hasOwnProperty;
 
   _ = require("lodash");
-
-  cache_scope = function(key, finder, query_call) {
-    switch (query_call != null ? query_call.constructor : void 0) {
-      case Function:
-        return finder.query.all[key] = function() {
-          var args, base, name;
-          args = 1 <= arguments.length ? slice.call(arguments, 0) : [];
-          return (base = finder.query)[name = key + ":" + (JSON.stringify(args))] != null ? base[name] : base[name] = query_call.apply(null, args);
-        };
-      default:
-        return finder.query.all[key] = query_call;
-    }
-  };
 
   Mem = module.exports;
 
@@ -741,7 +753,7 @@
       results = [];
       for (key in ref) {
         query_call = ref[key];
-        results.push(cache_scope(key, this.finder, query_call));
+        results.push(this.finder.use_cache(key, query_call));
       }
       return results;
     };
@@ -773,7 +785,7 @@
       key = this.model_id;
       all = this.finder.query.all;
       query = option != null ? option.query : void 0;
-      cache_scope(children, this.finder, function(id) {
+      this.finder.use_cache(children, function(id) {
         if (query == null) {
           query = Mem.Query[children];
         }
@@ -861,7 +873,11 @@
 }).call(this);
 
 (function() {
-  var Mem, Serial, array_base_parser, base, escaped, func, key, pack, patch_size, serial, string_parser, string_serializer, symbol_parser, symbol_serializer, textfy, unpack, url_serializer;
+  var Mem, OBJ, Serial, array_base_parser, base, escaped, func, key, pack, patch_size, serial, string_parser, string_serializer, symbol_parser, symbol_serializer, textfy, unpack, url_serializer;
+
+  OBJ = function() {
+    return new Object(null);
+  };
 
   serial = null;
 
@@ -996,7 +1012,7 @@
     },
     Keys: function(val) {
       var bool, hash, i, key, len, list;
-      hash = {};
+      hash = OBJ();
       if (val.length) {
         list = array_base_parser(val);
         for (i = 0, len = list.length; i < len; i++) {

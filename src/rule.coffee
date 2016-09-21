@@ -1,13 +1,5 @@
 _ = require "lodash"
 
-cache_scope = (key, finder, query_call)->
-  switch query_call?.constructor
-    when Function
-      finder.query.all[key] = (args...)->
-        finder.query["#{key}:#{JSON.stringify args}"] ?= query_call args...
-    else
-      finder.query.all[key] = query_call
-
 
 Mem = module.exports
 
@@ -30,7 +22,7 @@ class Mem.Rule
   scope: (cb)->
     @finder.scope = cb @finder.query.all
     for key, query_call of @finder.scope
-      cache_scope key, @finder, query_call
+      @finder.use_cache key, query_call
 
   belongs_to: (parent, option)->
     parents = "#{parent}s"
@@ -52,7 +44,7 @@ class Mem.Rule
     all = @finder.query.all
     query = option?.query
 
-    cache_scope children, @finder, (id)->
+    @finder.use_cache children, (id)->
       query ?= Mem.Query[children]
       query.where (o)-> o[key] == id
 

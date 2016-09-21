@@ -1,7 +1,10 @@
 _ = require "lodash"
 
+OBJ = ->
+  new Object null
+
 set_for = (list)->
-  set = {}
+  set = OBJ()
   for key in list
     set[key] = true
   set
