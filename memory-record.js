@@ -471,38 +471,48 @@
       this.orderBy = orderBy1;
     }
 
-    Query.prototype._filters = function(query, cb) {
-      var filters, req, target;
-      if (!query) {
+    Query.prototype._filters = function(req, cb) {
+      var filters, path, target, type;
+      if (!req) {
         return this;
       }
       filters = this.filters.concat();
-      switch (query != null ? query.constructor : void 0) {
+      type = req != null ? req.constructor : void 0;
+      switch (type) {
         case Object:
-          for (target in query) {
-            req = query[target];
-            filters.push(cb(target, req));
+          for (target in req) {
+            req = req[target];
+            path = _.property(target);
+            filters.push(cb(path, req));
           }
           break;
         case Function:
-          filters.push(cb(null, query));
+        case Array:
+        case String:
+          path = function(o) {
+            return o;
+          };
+          filters.push(cb(path, req));
           break;
         default:
-          console.log([query, query]);
+          console.log([type, req]);
           throw Error('unimplemented');
       }
       return new Query(this.finder, filters, this.orderBy);
     };
 
-    Query.prototype["in"] = function(query) {
-      return this._filters(query, function(target, req) {
-        switch (req != null ? req.constructor : void 0) {
+    Query.prototype["in"] = function(req) {
+      return this._filters(req, function(path, req) {
+        var set, type;
+        type = req != null ? req.constructor : void 0;
+        switch (type) {
           case Array:
+            set = set_for(req);
             return function(o) {
-              var i, key, len, set;
-              set = set_for(o[target]);
-              for (i = 0, len = req.length; i < len; i++) {
-                key = req[i];
+              var i, key, len, ref;
+              ref = path(o);
+              for (i = 0, len = ref.length; i < len; i++) {
+                key = ref[i];
                 if (set[key]) {
                   return true;
                 }
@@ -512,7 +522,7 @@
           case RegExp:
             return function(o) {
               var i, len, ref, val;
-              ref = o[target];
+              ref = path(o);
               for (i = 0, len = ref.length; i < len; i++) {
                 val = ref[i];
                 if (req.test(val)) {
@@ -526,51 +536,41 @@
           case String:
           case Number:
             return function(o) {
-              var set;
-              set = set_for(o[target]);
+              set = set_for(path(o));
               return set[req];
             };
           default:
-            console.log([req, req]);
+            console.log([type, req]);
             throw Error('unimplemented');
         }
       });
     };
 
-    Query.prototype.distinct = function(reduce, target) {
-      var query;
-      query = new Query(this.finder, this.filters, this.orderBy);
-      query._distinct = {
-        reduce: reduce,
-        target: target
-      };
-      return query;
-    };
-
-    Query.prototype.where = function(query) {
-      return this._filters(query, function(target, req) {
-        var set;
-        switch (req != null ? req.constructor : void 0) {
+    Query.prototype.where = function(req) {
+      return this._filters(req, function(path, req) {
+        var set, type;
+        type = req != null ? req.constructor : void 0;
+        switch (type) {
+          case Function:
+            return req;
           case Array:
             set = set_for(req);
             return function(o) {
-              return set[o[target]];
+              return set[path(o)];
             };
           case RegExp:
             return function(o) {
-              return req.test(o[target]);
+              return req.test(path(o));
             };
-          case Function:
-            return req;
           case null:
           case Boolean:
           case String:
           case Number:
             return function(o) {
-              return o[target] === req;
+              return req === path(o);
             };
           default:
-            console.log([type(req, req)]);
+            console.log([type, req]);
             throw Error('unimplemented');
         }
       });
@@ -602,6 +602,16 @@
       return this.where(function(o) {
         return (!o.search_words) || regexp.test(o.search_words);
       });
+    };
+
+    Query.prototype.distinct = function(reduce, target) {
+      var query;
+      query = new Query(this.finder, this.filters, this.orderBy);
+      query._distinct = {
+        reduce: reduce,
+        target: target
+      };
+      return query;
     };
 
     Query.prototype.sort = function(sortBy, orderBy) {

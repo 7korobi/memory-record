@@ -82,7 +82,7 @@ class Mem.Base.Finder
 
 
   _group: (query)->
-    {reduce, target} = query._distinct
+    { reduce, target } = query._distinct
     query._list =
       for id, o of query._reduce[reduce]
         o[target]

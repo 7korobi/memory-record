@@ -15,62 +15,61 @@ Mem = module.exports
 class Mem.Base.Query
   constructor: (@finder, @filters, @sortBy, @orderBy)->
 
-  _filters: (query, cb)->
-    return @ unless query
+  _filters: (req, cb)->
+    return @ unless req
     filters = @filters.concat()
-    switch query?.constructor
+    type = req?.constructor
+    switch type
       when Object
-        for target, req of query
-          filters.push cb target, req
-      when Function
-        filters.push cb null, query
+        for target, req of req
+          path = _.property target
+          filters.push cb path, req
+      when Function, Array, String
+        path = (o)-> o
+        filters.push cb path, req
       else
-        console.log [query, query]
+        console.log [type, req]
         throw Error 'unimplemented'
     new Query @finder, filters, @orderBy
 
-  in: (query)->
-    @_filters query, (target, req)->
-      switch req?.constructor
+  in: (req)->
+    @_filters req, (path, req)->
+      type = req?.constructor
+      switch type
         when Array
+          set = set_for req
           (o)->
-            set = set_for o[target]
-            for key in req
+            for key in path o
               return true if set[key]
             false
         when RegExp
           (o)->
-            for val in o[target]
+            for val in path o
               return true if req.test val
             false
         when null, Boolean, String, Number
           (o)->
-            set = set_for o[target]
+            set = set_for path o
             set[req]
         else
-          console.log [req, req]
+          console.log [type, req]
           throw Error 'unimplemented'
 
-  distinct: (reduce, target)->
-    query = new Query @finder, @filters, @orderBy
-    query._distinct = {reduce, target}
-    query
-
-  where: (query)->
-    @_filters query, (target, req)->
-      switch req?.constructor
-        when Array
-          set = set_for req
-          (o)->
-            set[ o[target] ]
-        when RegExp
-          (o)-> req.test o[target]
+  where: (req)->
+    @_filters req, (path, req)->
+      type = req?.constructor
+      switch type
         when Function
           req
+        when Array
+          set = set_for req
+          (o)-> set[ path o ]
+        when RegExp
+          (o)-> req.test path o
         when null, Boolean, String, Number
-          (o)-> o[target] == req
+          (o)-> req == path o
         else
-          console.log [type req, req]
+          console.log [type, req]
           throw Error 'unimplemented'
 
   search: (text)->
@@ -83,6 +82,11 @@ class Mem.Base.Query
     return @ unless list.length
     regexp = (new RegExp list.join("|"), "ig")
     @where (o)-> (! o.search_words) || regexp.test o.search_words
+
+  distinct: (reduce, target)->
+    query = new Query @finder, @filters, @orderBy
+    query._distinct = {reduce, target}
+    query
 
   sort: (sortBy, orderBy)->
     return @ if _.isEqual [sortBy, orderBy], [@sortBy, @orderBy]
