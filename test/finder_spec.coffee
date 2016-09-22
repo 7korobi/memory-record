@@ -2,8 +2,8 @@
 
 
 describe "Query", ()->
-  new Rule("finder").schema ->
-  Collection.finder.set [
+  new Rule("finder_spec").schema ->
+  Collection.finder_spec.set [
     _id: 10
     data:
       msg: "Hello World!"
@@ -12,48 +12,48 @@ describe "Query", ()->
     data:
       msg: "Bye World!"
   ]
-  Collection.finder.add
+  Collection.finder_spec.add
     _id: "news"
     data:
       msg: "Merge World!"
 
   it "ids", ->
-    expect( Query.finders.ids )
+    expect( Query.finder_specs.ids )
     .to.deep.eq ["10", "30", "news"]
 
   its "list",
-    Query.finders.list
+    Query.finder_specs.list
     [
       _id:     10
-      finder_id: 10
+      finder_spec_id: 10
       data:
         msg: "Hello World!"
     ,
       _id:     30
-      finder_id: 30
+      finder_spec_id: 30
       data:
         msg: "Bye World!"
     ,
       _id:     "news"
-      finder_id: "news"
+      finder_spec_id: "news"
       data:
         msg: "Merge World!"
     ]
 
   its "hash",
-    Query.finders.hash
+    Query.finder_specs.hash
     10:
       _id:     10
-      finder_id: 10
+      finder_spec_id: 10
       data:
         msg: "Hello World!"
     30:
       _id:     30
-      finder_id: 30
+      finder_spec_id: 30
       data:
         msg: "Bye World!"
     news:
       _id:     "news"
-      finder_id: "news"
+      finder_spec_id: "news"
       data:
         msg: "Merge World!"

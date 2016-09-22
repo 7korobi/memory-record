@@ -146,12 +146,12 @@ class Mem.Base.Finder
     @query.all._memory = news = OBJ()
     @merge from, parent
 
-    for key, old of _memory 
+    for key, old of _memory
       item = news[key]
       if item?
-        model.update item, old
+        @model.update item, old
       else
-        model.delete old
+        @model.delete old
     @rehash()
 
   merge: (from, parent)->

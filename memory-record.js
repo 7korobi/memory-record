@@ -123,9 +123,9 @@
   Mem = module.exports;
 
   Mem.Base.Finder = (function() {
-    function Finder(model1, sortBy1, orderBy1) {
+    function Finder(model, sortBy1, orderBy1) {
       var all;
-      this.model = model1;
+      this.model = model;
       this.sortBy = sortBy1;
       this.orderBy = orderBy1;
       all = new Mem.Base.Query(this, [], this.sortBy, this.orderBy);
@@ -333,9 +333,9 @@
         old = _memory[key];
         item = news[key];
         if (item != null) {
-          model.update(item, old);
+          this.model.update(item, old);
         } else {
-          model["delete"](old);
+          this.model["delete"](old);
         }
       }
       return this.rehash();
