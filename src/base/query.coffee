@@ -90,7 +90,6 @@ class Mem.Base.Query
 
   sort: (sortBy, orderBy)->
     return @ if _.isEqual [sortBy, orderBy], [@sortBy, @orderBy]
-    console.warn [sortBy, orderBy]
     new Query @finder, @filters, sortBy, orderBy
 
   shuffle: ->

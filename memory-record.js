@@ -1,36 +1,10 @@
 /**
  memory-record - activerecord like in-memory data manager
- @version v0.2.6
+ @version v0.2.7
  @link https://github.com/7korobi/memory-record
  @license 
 **/
 
-
-(function() {
-  Object.defineProperties(Array.prototype, {
-    first: {
-      get: function() {
-        return this[0];
-      }
-    },
-    last: {
-      get: function() {
-        return this[this.length - 1];
-      }
-    },
-    cycle: {
-      value: function(n) {
-        var i, idx, ref, results;
-        results = [];
-        for (idx = i = 0, ref = n; 0 <= ref ? i <= ref : i >= ref; idx = 0 <= ref ? ++i : --i) {
-          results.push(this[idx % this.length]);
-        }
-        return results;
-      }
-    }
-  });
-
-}).call(this);
 
 (function() {
   var Mem;
@@ -628,7 +602,6 @@
       if (_.isEqual([sortBy, orderBy], [this.sortBy, this.orderBy])) {
         return this;
       }
-      console.warn([sortBy, orderBy]);
       return new Query(this.finder, this.filters, sortBy, orderBy);
     };
 
@@ -727,6 +700,32 @@
     return Query;
 
   })();
+
+}).call(this);
+
+(function() {
+  Object.defineProperties(Array.prototype, {
+    first: {
+      get: function() {
+        return this[0];
+      }
+    },
+    last: {
+      get: function() {
+        return this[this.length - 1];
+      }
+    },
+    cycle: {
+      value: function(n) {
+        var i, idx, ref, results;
+        results = [];
+        for (idx = i = 0, ref = n; 0 <= ref ? i <= ref : i >= ref; idx = 0 <= ref ? ++i : --i) {
+          results.push(this[idx % this.length]);
+        }
+        return results;
+      }
+    }
+  });
 
 }).call(this);
 

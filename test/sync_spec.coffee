@@ -1,5 +1,5 @@
 { Collection, Query, Rule } = require("../memory-record.js")
-_ = require "lodash"
+
 
 describe "Collection", ()->
   it "set", ->

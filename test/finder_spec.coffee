@@ -1,4 +1,5 @@
-{Collection, Query, Rule} = require("../memory-record.js")
+{ Collection, Query, Rule } = require("../memory-record.js")
+
 
 describe "Query", ()->
   new Rule("finder").schema ->

@@ -1,4 +1,5 @@
-{pack, unpack, Serial} = require("../memory-record.js")
+{ pack, unpack, Serial } = require("../memory-record.js")
+
 
 describe "pack", ()->
   it "Keys", ->
