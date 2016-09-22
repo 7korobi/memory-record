@@ -28,6 +28,6 @@
     "grunt-mocha-chai-sinon": "0.0.9"
   },
   "dependencies": {
-    "lodash": "^3.10.1"
+    "lodash": "^4.16.1"
   }
 }
