@@ -60,6 +60,13 @@ class Mem.Rule
       @finder.validate (o)->
         o[parent]?
 
+  has_many_own: (children)->
+    key = children.replace /s$/, "_ids"
+    @inits.push =>
+      Object.defineProperty @model.prototype, children,
+        get: ->
+          Mem.Query[children].finds(@[key])
+
   has_many: (children, option)->
     key = @model_id
     all = @finder.query.all

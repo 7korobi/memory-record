@@ -14,20 +14,27 @@
       "url": "http://opensource.org/licenses/MIT"
     }
   ],
+  "directories": {
+    "test": "test-espower/"
+  },
+  "run": {
+    "power": ""
+  },
   "files": [
     "memory-record.js",
     "memory-record.min.js",
     "memory-record.min.js.map"
   ],
   "devDependencies": {
-    "grunt": "^0.4.6",
+    "grunt": "^1.0.0",
     "grunt-banner": "^0.6.0",
-    "grunt-contrib-coffee": "^0.13.0",
-    "grunt-contrib-uglify": "^0.11.0",
-    "grunt-contrib-watch": "^0.6.1",
-    "grunt-mocha-chai-sinon": "0.0.9"
+    "grunt-contrib-coffee": "^1.0.0",
+    "grunt-contrib-uglify": "^2.0.0",
+    "grunt-mocha-test": "^0.13.2",
+    "intelli-espower-loader": "^1.0.1",
+    "power-assert": "^1.4.2"
   },
   "dependencies": {
-    "lodash": "^4.16.1"
+    "lodash": "^4.17.2"
   }
 }

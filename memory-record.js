@@ -832,6 +832,20 @@
       }
     };
 
+    Rule.prototype.has_many_own = function(children) {
+      var key;
+      key = children.replace(/s$/, "_ids");
+      return this.inits.push((function(_this) {
+        return function() {
+          return Object.defineProperty(_this.model.prototype, children, {
+            get: function() {
+              return Mem.Query[children].finds(this[key]);
+            }
+          });
+        };
+      })(this));
+    };
+
     Rule.prototype.has_many = function(children, option) {
       var all, key, query;
       key = this.model_id;

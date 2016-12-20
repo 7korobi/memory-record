@@ -4,7 +4,7 @@
 new Rule("map_reduce_spec").schema ->
   class @model extends @model
     @map_reduce: ({type, _id}, emit)->
-      emit "full"
+      emit "full",
         list: type
         set:  type
       emit "case", "typed", type,

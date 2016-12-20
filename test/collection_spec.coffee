@@ -1,5 +1,5 @@
+assert = require "power-assert"
 { Collection, Query, Rule } = require("../memory-record.js")
-
 
 describe "Query", ()->
   new Rule("collection_spec").schema ->
@@ -44,6 +44,4 @@ describe "Query", ()->
   dml.rehash()
 
   it "ids", ->
-    expect( Query.collection_specs.ids )
-    .to.deep.eq ["10", "30", "40", "50", "60", "70", "80"]
-
+    assert Query.collection_specs.ids == ["10", "30", "40", "50", "60", "70", "80"]
