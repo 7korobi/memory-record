@@ -1,6 +1,5 @@
 { Collection, Query, Rule } = require("../memory-record.js")
 
-
 describe "Query", ()->
   new Rule("finder_spec").schema ->
   Collection.finder_spec.set [
@@ -18,12 +17,10 @@ describe "Query", ()->
       msg: "Merge World!"
 
   it "ids", ->
-    expect( Query.finder_specs.ids )
-    .to.deep.eq ["10", "30", "news"]
+    assert.deepEqual Query.finder_specs.ids, ["10", "30", "news"]
 
-  its "list",
-    Query.finder_specs.list
-    [
+  it "list", ->
+    assert.deepEqual Query.finder_specs.list, [
       _id:     10
       finder_spec_id: 10
       data:
@@ -40,20 +37,20 @@ describe "Query", ()->
         msg: "Merge World!"
     ]
 
-  its "hash",
-    Query.finder_specs.hash
-    10:
-      _id:     10
-      finder_spec_id: 10
-      data:
-        msg: "Hello World!"
-    30:
-      _id:     30
-      finder_spec_id: 30
-      data:
-        msg: "Bye World!"
-    news:
-      _id:     "news"
-      finder_spec_id: "news"
-      data:
-        msg: "Merge World!"
+  it "hash", ->
+    assert.deepEqual Query.finder_specs.hash,
+      10:
+        _id:     10
+        finder_spec_id: 10
+        data:
+          msg: "Hello World!"
+      30:
+        _id:     30
+        finder_spec_id: 30
+        data:
+          msg: "Bye World!"
+      news:
+        _id:     "news"
+        finder_spec_id: "news"
+        data:
+          msg: "Merge World!"

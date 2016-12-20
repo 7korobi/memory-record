@@ -1,7 +1,7 @@
 {
   "name": "memory-record",
   "description": "activerecord like in-memory data manager",
-  "version": "0.2.8",
+  "version": "0.2.9",
   "author": "7korobi <7korobi@gmail.com>",
   "repository": {
     "type": "git",
@@ -30,6 +30,7 @@
     "grunt-banner": "^0.6.0",
     "grunt-contrib-coffee": "^1.0.0",
     "grunt-contrib-uglify": "^2.0.0",
+    "grunt-contrib-watch": "^1.0.0",
     "grunt-mocha-test": "^0.13.2",
     "intelli-espower-loader": "^1.0.1",
     "power-assert": "^1.4.2"

@@ -32,6 +32,4 @@ describe "Collection", ()->
       data:
         msg: "Merge New World!"
 
-    expect( Query.tests.ids ).to.have.members ["10", "20", "news", "newnews"]
-
-
+    assert.deepEqual Query.tests.ids, ["10", "20", "news", "newnews"]

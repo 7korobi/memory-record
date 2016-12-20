@@ -34,5 +34,5 @@ describe "Collection", ()->
       data: "invalid data"
     ]
 
-    expect( Query.tests.pluck("_id") ).to.have.members [10, 20]
-    expect( Query.tests.pluck("base._id") ).to.have.members [100, 100]
+    assert.deepEqual Query.tests.pluck("_id"), [10, 20]
+    assert.deepEqual Query.tests.pluck("base._id"), [100, 100]

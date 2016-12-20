@@ -18,7 +18,7 @@ describe "Collection", ()->
       data:
         msg: "Merge World!"
 
-    expect( Query.tests.ids ).to.have.members ["10", "20", "news"]
+    assert.deepEqual Query.tests.ids, ["10", "20", "news"]
 
   it "reset Hash", ->
     new Rule("test").schema ->
@@ -33,10 +33,10 @@ describe "Collection", ()->
         data:
           msg: "Merge World!"
 
-    expect( Query.tests.ids ).to.have.members ["10", "20", "news"]
+    assert.deepEqual Query.tests.ids, ["10", "20", "news"]
 
 
   it "remove", ->
     Collection.test.remove
       _id: 20
-    expect( Query.tests.ids ).to.have.members ["10", "news"]
+    assert.deepEqual Query.tests.ids, ["10", "news"]

@@ -44,4 +44,4 @@ describe "Query", ()->
   dml.rehash()
 
   it "ids", ->
-    assert Query.collection_specs.ids == ["10", "30", "40", "50", "60", "70", "80"]
+    assert.deepEqual Query.collection_specs.ids, ["10", "30", "40", "50", "60", "70", "80"]

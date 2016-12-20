@@ -56,44 +56,44 @@ describe "Collection", ()->
           "defgh"
         ]
 
-    expect( Query.tests.pluck("_id") ).to.have.members [100, 20, "news", "newnews"]
+    assert.deepEqual Query.tests.pluck("_id"), ["newnews", "news", 20, 100]
 
 describe "Query", ()->
   it "where selection for function", ->
-    expect( Query.tests.where((o)-> o.key == "C" ).pluck("_id") ).to.have.members ["newnews"]
+    assert.deepEqual Query.tests.where((o)-> o.key == "C" ).pluck("_id"), ["newnews"]
 
   it "where selection for String", ->
-    expect( Query.tests.where(key: "A").pluck("_id") ).to.have.members [100, "news"]
+    assert.deepEqual Query.tests.where(key: "A").pluck("_id"), [100, "news"]
 
   it "where selection for Array (same SQL IN)", ->
-    expect( Query.tests.where(key: ["C","A"]).pluck("_id") ).to.have.members [100, "news", "newnews"]
+    assert.deepEqual Query.tests.where(key: ["C","A"]).pluck("_id"), [100, "news", "newnews"]
 
   it "where selection for Regexp", ->
-    expect( Query.tests.where("data.msg": /Merge/).pluck("_id") ).to.have.members ["news", "newnews"]
+    assert.deepEqual Query.tests.where("data.msg": /Merge/).pluck("_id"), ["news", "newnews"]
 
   it "where selection for Regexp", ->
-    expect( Query.tests.where("data.options.1": "cdefg").pluck("_id") ).to.have.members ["news", "newnews"]
+    assert.deepEqual Query.tests.where("data.options.1": "cdefg").pluck("_id"), ["news", "newnews"]
 
   it "in selection for String", ->
-    expect( Query.tests.in(key: "A").pluck("_id") ).to.have.members [100, 20, "news"]
+    assert.deepEqual Query.tests.in(key: "A").pluck("_id"), [20, 100, "news"]
 
   it "in selection for Array", ->
-    expect( Query.tests.in(list: "A").pluck("_id") ).to.have.members [100, 20, "news"]
+    assert.deepEqual Query.tests.in(list: "A").pluck("_id"), [20, 100, "news"]
 
   it "in selection for Regexp", ->
-    expect( Query.tests.in("data.options": /abcde/).pluck("_id") ).to.have.members [100, 20, "news"]
+    assert.deepEqual Query.tests.in("data.options": /abcde/).pluck("_id"), [20, 100, "news"]
 
   it "sort defaults", ->
-    expect( Query.tests.pluck("_id") ).to.deep.eq ["newnews", "news", 20, 100]
+    assert.deepEqual Query.tests.pluck("_id"), ["newnews", "news", 20, 100]
 
   it "sort (ascends)", ->
-    expect( Query.tests.sort("_id").pluck("_id") ).to.deep.eq [20, 100, "newnews", "news"]
+    assert.deepEqual Query.tests.sort("_id").pluck("_id"), [20, 100, "newnews", "news"]
 
   it "sort ascends", ->
-    expect( Query.tests.sort(["_id"],["asc"]).pluck("_id") ).to.deep.eq [20, 100, "newnews", "news"]
+    assert.deepEqual Query.tests.sort(["_id"],["asc"]).pluck("_id"), [20, 100, "newnews", "news"]
 
   it "sort descends", ->
-    expect( Query.tests.sort(["_id"],["desc"]).pluck("_id") ).to.deep.eq [100, 20, "news", "newnews"]
+    assert.deepEqual Query.tests.sort(["_id"],["desc"]).pluck("_id"), [100, 20, "news", "newnews"]
 
   it "shuffle", ->
-    expect( Query.tests.shuffle().pluck("_id") ).to.have.members [100, 20, "news", "newnews"]
+    assert.deepEqual Query.tests.shuffle().pluck("_id").sort(), [100, 20, "news", "newnews"].sort()

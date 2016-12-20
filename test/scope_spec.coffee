@@ -35,11 +35,11 @@ describe "Collection", ()->
       data:
         msg: "Merge New World!"
 
-    expect( Query.tests.ids ).to.have.members ["10", "20", "news", "newnews"]
+    assert.deepEqual Query.tests.ids, ["10", "20", "news", "newnews"]
 
 describe "Query", ()->
   it "scope call", ->
-    expect( Query.tests.topA.ids ).to.have.members ["10", "news"]
+    assert.deepEqual Query.tests.topA.ids, ["10", "news"]
 
   it "scope with argument", ->
-    expect( Query.tests.in_key("A").ids ).to.have.members ["10", "20", "news"]
+    assert.deepEqual Query.tests.in_key("A").ids, ["10", "20", "news"]

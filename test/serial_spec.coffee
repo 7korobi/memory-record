@@ -4,97 +4,98 @@
 describe "pack", ()->
   it "Keys", ->
     a = b = c = true
-    expect( pack.Keys {a,b,c} ).to.eq "a,b,c"
+    assert pack.Keys({a,b,c}) == "a,b,c"
 
   it "Array", ->
-    expect( pack.Array [1,2,3] ).to.eq "1,2,3"
-    expect( pack.Array 1 ).to.eq "1"
-    expect( pack.Array null ).to.eq ""
+    assert pack.Array([1,2,3]) == "1,2,3"
+    assert pack.Array(1) == "1"
+    assert pack.Array(null) == ""
 
   it "Date", ->
     now = new Date("Mon Jan 25 2016 11:00:00 GMT+0900 (JST)")
-    expect( pack.Date now ).to.eq "h6GJLTa"
+    assert pack.Date(now) == "h6GJLTa"
 
   it "Bool", ->
-    expect( pack.Bool true  ).to.eq "T"
-    expect( pack.Bool false ).to.eq "F"
-    expect( pack.Bool NaN   ).to.eq "F"
+    assert pack.Bool(true ) == "T"
+    assert pack.Bool(false) == "F"
+    assert pack.Bool(NaN)   == "F"
 
   it "Number", ->
-    expect( pack.Number 1 ).to.eq "1"
+    assert pack.Number(1) == "1"
 
   it "String", ->
-    expect( pack.String "[test]" ).to.eq "[test]"
-    expect( pack.String null ).to.eq ""
+    assert pack.String("[test]") == "[test]"
+    assert pack.String(null) == ""
 
   it "Url", ->
-    expect( pack.Url "[test]" ).to.eq "%5Btest%5D"
-    expect( pack.Url "a;b" ).to.eq "a;b"
-    expect( pack.Url null ).to.eq ""
+    assert pack.Url("[test]") == "%5Btest%5D"
+    assert pack.Url("a;b") == "a;b"
+    assert pack.Url(null) == ""
 
   it "Cookie", ->
-    expect( pack.Cookie "[test]" ).to.eq "%5Btest%5D"
-    expect( pack.Cookie "a;b" ).to.eq "a%3Bb"
-    expect( pack.Cookie null ).to.eq ""
+    assert pack.Cookie("[test]") == "%5Btest%5D"
+    assert pack.Cookie("a;b") == "a%3Bb"
+    assert pack.Cookie(null) == ""
 
   it "Text", ->
-    expect( pack.Text "[test]" ).to.eq "%5Btest%5D"
-    expect( pack.Text "a;b" ).to.eq "a%3Bb"
-    expect( pack.Text null ).to.eq ""
+    assert pack.Text("[test]") == "%5Btest%5D"
+    assert pack.Text("a;b") == "a%3Bb"
+    assert pack.Text(null) == ""
 
   it "Thru", ->
-    expect( pack.Thru undefined ).to.eq undefined
+    assert pack.Thru(undefined) == undefined
 
 
 describe "unpack", ()->
   it "Keys", ->
-    expect( unpack.Keys("a,b,c").a ).to.eq true
-    expect( unpack.Keys("a,b,c").b ).to.eq true
-    expect( unpack.Keys("a,b,c").c ).to.eq true
+    assert.deepEqual unpack.Keys("a,b,c"),
+      a: true
+      b: true
+      c: true
 
   it "Array", ->
-    expect( unpack.Array("1,2,3") ).to.have.members ["1","2","3"]
-    expect( unpack.Array(-1) ).to.have.members ["-1"]
-    expect( unpack.Array(null) ).to.have.members []
-    expect( unpack.Array(undefined) ).to.have.members []
+    assert.deepEqual unpack.Array("1,2,3"), ["1","2","3"]
+    assert.deepEqual unpack.Array(-1), ["-1"]
+    assert.deepEqual unpack.Array(null), []
+    assert.deepEqual unpack.Array(undefined), []
 
   it "Date", ->
     now_int = new Date("Mon Jan 25 2016 11:00:00 GMT+0900 (JST)") - 0
-    expect( unpack.Date "h6GJLTa" ).to.eq now_int
+    assert unpack.Date("h6GJLTa") == now_int
 
   it "Bool", ->
-    expect( unpack.Bool "T" ).to.eq true
-    expect( unpack.Bool "F" ).to.eq false
-    expect( unpack.Bool null ).to.be.NaN
-    expect( unpack.Bool "" ).to.be.NaN
+    assert unpack.Bool("T")  == true
+    assert unpack.Bool("F")  == false
+    assert isNaN unpack.Bool(null)
+    assert isNaN unpack.Bool("")
 
   it "Number", ->
-    expect( unpack.Number "1" ).to.eq 1
-    expect( unpack.Number "0xa" ).to.eq 10
-    expect( unpack.Number "a" ).to.be.NaN
+    assert unpack.Number("1")   == 1
+    assert unpack.Number("0xa") == 10
+    assert isNaN unpack.Number("a")
 
   it "String", ->
-    expect( unpack.String null ).to.eq ""
-    expect( unpack.String "" ).to.eq ""
-    expect( unpack.String "%5btest%5d" ).to.eq "%5btest%5d"
+    assert unpack.String(null) == ""
+    assert unpack.String("") == ""
+    assert unpack.String("%5btest%5d") == "%5btest%5d"
 
   it "Url", ->
-    expect( unpack.Url "%5Btest%5D" ).to.eq "[test]"
-    expect( unpack.Url "%5btest%5d" ).to.eq "[test]"
-    expect( unpack.Url null ).to.eq ""
-    expect( unpack.Url "" ).to.eq ""
+    assert unpack.Url("%5Btest%5D") == "[test]"
+    assert unpack.Url("%5btest%5d") == "[test]"
+    assert unpack.Url(null) == ""
+    assert unpack.Url("") == ""
 
   it "Cookie", ->
-    expect( unpack.Cookie "%5Btest%5D" ).to.eq "[test]"
-    expect( unpack.Cookie "%5btest%5d" ).to.eq "[test]"
-    expect( unpack.Cookie null ).to.eq ""
-    expect( unpack.Cookie "" ).to.eq ""
+    assert unpack.Cookie("%5Btest%5D") == "[test]"
+    assert unpack.Cookie("%5btest%5d") == "[test]"
+    assert unpack.Cookie(null) == ""
+    assert unpack.Cookie("") == ""
 
   it "Text", ->
-    expect( unpack.Text "%5Btest%5D" ).to.eq "[test]"
-    expect( unpack.Text "%5btest%5d" ).to.eq "[test]"
-    expect( unpack.Text null ).to.eq ""
-    expect( unpack.Text "" ).to.eq ""
+    assert unpack.Text("%5Btest%5D") == "[test]"
+    assert unpack.Text("%5btest%5d") == "[test]"
+    assert unpack.Text(null) == ""
+    assert unpack.Text("") == ""
 
   it "Thru", ->
-    expect( unpack.Thru undefined ).to.eq undefined
+    assert unpack.Thru(undefined) == undefined
