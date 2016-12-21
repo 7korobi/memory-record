@@ -28,8 +28,8 @@ describe "Query", ()->
 
   it "reduce", ->
     { full, case:{ typed }} = Query.map_reduce_specs.reduce
-    assert reduce.full.list.join("") == "BCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEA"
-    assert.deepEqual full.set
+    assert full.list.join("") == "BCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEA"
+    assert.deepEqual full.set,
       A: true
       B: true
       C: true
