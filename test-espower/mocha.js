@@ -527,7 +527,11 @@
   describe("Collection", function() {
     it("set", function() {
       new Rule("base").schema(function() {
+        this.order("_id");
         this.has_many("tests");
+        this.has_many("bases", {
+          by: "ids"
+        });
         return this.model = (function(superClass) {
           extend(model, superClass);
 
@@ -539,7 +543,7 @@
 
         })(this.model);
       });
-      return new Rule("test").schema(function() {
+      new Rule("test").schema(function() {
         this.belongs_to("base", {
           dependent: true
         });
@@ -554,14 +558,17 @@
 
         })(this.model);
       });
-    });
-    return it("has base model", function() {
       Collection.base.set([
         {
-          _id: 100
+          _id: 100,
+          base_ids: [200, 300]
+        }, {
+          _id: 200
+        }, {
+          _id: 300
         }
       ]);
-      Collection.test.set([
+      return Collection.test.set([
         {
           _id: 10,
           base_id: 100,
@@ -577,11 +584,20 @@
         }, {
           _id: 30,
           base_id: 101,
-          data: "invalid data"
+          data: "invalid base id"
         }
       ]);
+    });
+    it("belongs to base model", function() {
       assert.deepEqual(Query.tests.pluck("_id"), [10, 20]);
       return assert.deepEqual(Query.tests.pluck("base._id"), [100, 100]);
+    });
+    it("has test model by foreign key", function() {
+      return assert.deepEqual(Query.bases.list[0].tests.pluck("_id"), [10, 20]);
+    });
+    return it("has base model by ids", function() {
+      assert.deepEqual(Query.bases.list[0].base_ids, [200, 300]);
+      return assert.deepEqual(Query.bases.list[0].bases.pluck("_id"), [200, 300]);
     });
   });
 

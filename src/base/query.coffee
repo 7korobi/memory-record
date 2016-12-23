@@ -15,27 +15,28 @@ Mem = module.exports
 class Mem.Base.Query
   constructor: (@finder, @filters, @sortBy, @orderBy)->
 
-  _filters: (req, cb)->
+  _query_parser: (req, cb)->
     return @ unless req
     filters = @filters.concat()
-    type = req?.constructor
-    switch type
+    doit = (target, req, path)->
+      f = cb target, req, path
+      filters.push f if f
+
+    switch req?.constructor
       when Object
         for target, req of req
-          path = _.property target
-          filters.push cb path, req
+          doit target, req, _.property target
+
       when Function, Array, String
-        path = (o)-> o
-        filters.push cb path, req
+        doit target, req, (o)-> o
       else
-        console.log [type, req]
+        console.log { req }
         throw Error 'unimplemented'
     new Query @finder, filters, @orderBy
 
   in: (req)->
-    @_filters req, (path, req)->
-      type = req?.constructor
-      switch type
+    q = @_query_parser req, (target, req, path)->
+      switch req?.constructor
         when Array
           set = set_for req
           (o)->
@@ -52,25 +53,32 @@ class Mem.Base.Query
             set = set_for path o
             set[req]
         else
-          console.log [type, req]
+          console.log { req }
           throw Error 'unimplemented'
+    q
 
   where: (req)->
-    @_filters req, (path, req)->
-      type = req?.constructor
-      switch type
+    ids = null
+    q = @_query_parser req, (target, req, path)->
+      switch req?.constructor
         when Function
           req
         when Array
-          set = set_for req
-          (o)-> set[ path o ]
+          if "id" == target
+            ids = req
+            null
+          else
+            set = set_for req
+            (o)-> set[ path o ]
         when RegExp
           (o)-> req.test path o
         when null, Boolean, String, Number
           (o)-> req == path o
         else
-          console.log [type, req]
+          console.log { req }
           throw Error 'unimplemented'
+    q._ids = ids if ids?
+    q
 
   search: (text)->
     return @ unless text

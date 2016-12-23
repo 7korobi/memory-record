@@ -86,7 +86,7 @@ class Mem.Base.Finder
       for [path, map] in emits
         o = _.get base, path
         unless o
-          o = paths[path.join(".")] = init map 
+          o = paths[path.join(".")] = init map
           _.set base, path, o
           o
         reduce item, o, map
@@ -120,9 +120,11 @@ class Mem.Base.Finder
         query._memory[id] = o
         query._hash[id] = o.item
 
+    ids = query._ids ? Object.keys all
     query._hash = OBJ()
     query._list =
-      for id, o of all
+      for id in ids
+        o = all[id]
         every = true
         for chk in query.filters when ! chk o.item
           every = false

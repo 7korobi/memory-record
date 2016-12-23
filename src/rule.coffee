@@ -60,26 +60,38 @@ class Mem.Rule
       @finder.validate (o)->
         o[parent]?
 
-  has_many_own: (children)->
-    key = children.replace /s$/, "_ids"
-    @inits.push =>
-      Object.defineProperty @model.prototype, children,
-        get: ->
-          Mem.Query[children].finds(@[key])
-
-  has_many: (children, option)->
-    key = @model_id
+  has_many_by_foreign_key: (children, option = {})->
     all = @finder.query.all
-    query = option?.query
+    { key = @model_id } = option
 
     @finder.use_cache children, (id)->
-      query ?= Mem.Query[children]
+      { query = Mem.Query[children] } = option
       query.where (o)-> o[key] == id
 
     @inits.push =>
       Object.defineProperty @model.prototype, children,
         get: ->
           all[children](@._id)
+
+  has_many_by_ids: (children, option = {})->
+    all = @finder.query.all
+    { key = children.replace /s$/, "_ids" } = option
+
+    @finder.use_cache children, (ids)->
+      { query = Mem.Query[children] } = option
+      query.where(id: ids)
+
+    @inits.push =>
+      Object.defineProperty @model.prototype, children,
+        get: ->
+          all[children](@[key])
+
+  has_many: (children, option = {})->
+    switch option.by
+      when "ids"
+        @has_many_by_ids children, option
+      else
+        @has_many_by_foreign_key children, option
 
   shuffle: ->
     query = @finder.query.all.shuffle()
