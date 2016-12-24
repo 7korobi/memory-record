@@ -480,7 +480,7 @@
         case Function:
         case Array:
         case String:
-          doit(target, req, function(o) {
+          doit(null, req, function(o) {
             return o;
           });
           break;
@@ -490,7 +490,7 @@
           });
           throw Error('unimplemented');
       }
-      return new Query(this.finder, filters, this.orderBy);
+      return new Query(this.finder, filters, this.sortBy, this.orderBy);
     };
 
     Query.prototype["in"] = function(req) {
@@ -533,7 +533,9 @@
             };
           default:
             console.log({
-              req: req
+              target: target,
+              req: req,
+              path: path
             });
             throw Error('unimplemented');
         }
@@ -550,7 +552,7 @@
           case Function:
             return req;
           case Array:
-            if ("id" === target) {
+            if ("_id" === target) {
               ids = req;
               return null;
             } else {
@@ -568,12 +570,20 @@
           case Boolean:
           case String:
           case Number:
-            return function(o) {
-              return req === path(o);
-            };
+            if ("_id" === target) {
+              ids = [req];
+              return null;
+            } else {
+              return function(o) {
+                return req === path(o);
+              };
+            }
+            break;
           default:
             console.log({
-              req: req
+              target: target,
+              req: req,
+              path: path
             });
             throw Error('unimplemented');
         }
@@ -614,7 +624,7 @@
 
     Query.prototype.distinct = function(reduce, target) {
       var query;
-      query = new Query(this.finder, this.filters, this.orderBy);
+      query = new Query(this.finder, this.filters, this.sortBy, this.orderBy);
       query._distinct = {
         reduce: reduce,
         target: target
@@ -868,9 +878,39 @@
       })(this));
     };
 
-    Rule.prototype.tree_base = function(key, ik) {};
+    Rule.prototype.relation_tree = function(key, ik, qk) {
+      var all;
+      all = this.finder.query.all;
+      this.finder.use_cache(key, function(id, n) {
+        var i, k, len, obj, obj1, q, ref;
+        if (n) {
+          q = all.where((
+            obj = {},
+            obj["" + ik] = id,
+            obj
+          ));
+          ref = q.pluck(qk);
+          for (i = 0, len = ref.length; i < len; i++) {
+            k = ref[i];
+            id.push(k);
+          }
+          return all[key](_.uniq(id), n - 1);
+        } else {
+          return all.where((
+            obj1 = {},
+            obj1["" + qk] = id,
+            obj1
+          ));
+        }
+      });
+      return this.model.prototype[key] = function(n) {
+        var id;
+        id = [this[qk]];
+        return all[key](id, n);
+      };
+    };
 
-    Rule.prototype.graph_base = function(key, ik, qk) {
+    Rule.prototype.relation_graph = function(key, ik, qk) {
       var all;
       all = this.finder.query.all;
       this.finder.use_cache(key, function(id, n) {
@@ -937,23 +977,23 @@
     };
 
     Rule.prototype.tree = function(option) {
-      var ik, key;
+      var key, ref;
       if (option == null) {
         option = {};
       }
-      key = option.key;
-      ik = key != null ? key : this.model_list + "_id";
-      return this.relation_to_one("up", ik);
+      key = (ref = option.key) != null ? ref : this.model_id;
+      return this.relation_tree("nodes", key, "_id");
     };
 
     Rule.prototype.graph = function(option) {
-      var ik, key;
+      var cost, directed, ik, key;
       if (option == null) {
         option = {};
       }
-      key = option.key;
+      key = option.key, directed = option.directed, cost = option.cost;
       ik = key != null ? key : this.model_list.replace(/s$/, "_ids");
-      return this.graph_base("nodes", ik, "_id");
+      this.relation_to_many(this.model_list, this.model_list, ik, "_id");
+      return this.relation_graph("path", ik, "_id");
     };
 
     Rule.prototype.shuffle = function() {

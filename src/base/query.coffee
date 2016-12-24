@@ -28,11 +28,11 @@ class Mem.Base.Query
           doit target, req, _.property target
 
       when Function, Array, String
-        doit target, req, (o)-> o
+        doit null, req, (o)-> o
       else
         console.log { req }
         throw Error 'unimplemented'
-    new Query @finder, filters, @orderBy
+    new Query @finder, filters, @sortBy, @orderBy
 
   in: (req)->
     q = @_query_parser req, (target, req, path)->
@@ -53,7 +53,7 @@ class Mem.Base.Query
             set = set_for path o
             set[req]
         else
-          console.log { req }
+          console.log { target, req, path }
           throw Error 'unimplemented'
     q
 
@@ -64,7 +64,7 @@ class Mem.Base.Query
         when Function
           req
         when Array
-          if "id" == target
+          if "_id" == target
             ids = req
             null
           else
@@ -73,9 +73,13 @@ class Mem.Base.Query
         when RegExp
           (o)-> req.test path o
         when null, Boolean, String, Number
-          (o)-> req == path o
+          if "_id" == target
+            ids = [req]
+            null
+          else
+            (o)-> req == path o
         else
-          console.log { req }
+          console.log { target, req, path }
           throw Error 'unimplemented'
     q._ids = ids if ids?
     q
@@ -92,7 +96,7 @@ class Mem.Base.Query
     @where (o)-> (! o.search_words) || regexp.test o.search_words
 
   distinct: (reduce, target)->
-    query = new Query @finder, @filters, @orderBy
+    query = new Query @finder, @filters, @sortBy, @orderBy
     query._distinct = {reduce, target}
     query
 

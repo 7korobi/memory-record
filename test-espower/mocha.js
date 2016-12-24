@@ -403,6 +403,11 @@
 }).call(this);
 
 (function() {
+
+
+}).call(this);
+
+(function() {
   var Collection, Query, Rule, ref;
 
   ref = require("../memory-record.js"), Collection = ref.Collection, Query = ref.Query, Rule = ref.Rule;
@@ -458,81 +463,68 @@
   });
 
   describe("Query", function() {
-    it("where selection for function", function() {
-      return assert.deepEqual(Query.tests.where(function(o) {
+    it("where selection", function() {
+      assert.deepEqual(Query.tests.where(function(o) {
         return o.key === "C";
       }).pluck("_id"), ["newnews"]);
-    });
-    it("where selection for String", function() {
-      return assert.deepEqual(Query.tests.where({
+      assert.deepEqual(Query.tests.where({
         key: "A"
-      }).pluck("_id"), [100, "news"]);
+      }).pluck("_id"), ["news", 100]);
+      assert.deepEqual(Query.tests.where({
+        "data.msg": /Merge/
+      }).pluck("_id"), ["newnews", "news"]);
+      return assert.deepEqual(Query.tests.where({
+        "data.options.1": "cdefg"
+      }).pluck("_id"), ["newnews", "news"]);
     });
     it("where selection for Array (same SQL IN)", function() {
       return assert.deepEqual(Query.tests.where({
         key: ["C", "A"]
-      }).pluck("_id"), [100, "news", "newnews"]);
+      }).pluck("_id"), ["newnews", "news", 100]);
     });
-    it("where selection for Regexp", function() {
-      return assert.deepEqual(Query.tests.where({
-        "data.msg": /Merge/
-      }).pluck("_id"), ["news", "newnews"]);
-    });
-    it("where selection for Regexp", function() {
-      return assert.deepEqual(Query.tests.where({
-        "data.options.1": "cdefg"
-      }).pluck("_id"), ["news", "newnews"]);
-    });
-    it("in selection for String", function() {
-      return assert.deepEqual(Query.tests["in"]({
+    it("in selection", function() {
+      assert.deepEqual(Query.tests["in"]({
         key: "A"
-      }).pluck("_id"), [20, 100, "news"]);
-    });
-    it("in selection for Array", function() {
-      return assert.deepEqual(Query.tests["in"]({
+      }).pluck("_id"), ["news", 20, 100]);
+      assert.deepEqual(Query.tests["in"]({
         list: "A"
-      }).pluck("_id"), [20, 100, "news"]);
-    });
-    it("in selection for Regexp", function() {
+      }).pluck("_id"), ["news", 20, 100]);
       return assert.deepEqual(Query.tests["in"]({
         "data.options": /abcde/
-      }).pluck("_id"), [20, 100, "news"]);
+      }).pluck("_id"), ["news", 20, 100]);
     });
-    it("sort defaults", function() {
-      return assert.deepEqual(Query.tests.pluck("_id"), ["newnews", "news", 20, 100]);
-    });
-    it("sort (ascends)", function() {
-      return assert.deepEqual(Query.tests.sort("_id").pluck("_id"), [20, 100, "newnews", "news"]);
-    });
-    it("sort ascends", function() {
-      return assert.deepEqual(Query.tests.sort(["_id"], ["asc"]).pluck("_id"), [20, 100, "newnews", "news"]);
-    });
-    it("sort descends", function() {
+    it("sort", function() {
+      assert.deepEqual(Query.tests.pluck("_id"), ["newnews", "news", 20, 100]);
+      assert.deepEqual(Query.tests.sort("_id").pluck("_id"), [20, 100, "newnews", "news"]);
+      assert.deepEqual(Query.tests.sort(["_id"], ["asc"]).pluck("_id"), [20, 100, "newnews", "news"]);
       return assert.deepEqual(Query.tests.sort(["_id"], ["desc"]).pluck("_id"), [100, 20, "news", "newnews"]);
     });
     return it("shuffle", function() {
-      return assert.deepEqual(Query.tests.shuffle().pluck("_id").sort(), [100, 20, "news", "newnews"].sort());
+      assert.deepEqual(Query.tests.shuffle().pluck("_id").sort(), [100, 20, "newnews", "news"]);
+      return assert.notDeepEqual(Query.tests.shuffle().pluck("_id"), [100, 20, "newnews", "news"]);
     });
   });
 
 }).call(this);
 
 (function() {
-  var Collection, Query, Rule, ref,
+  var Collection, Query, Rule, _, ref,
     extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
     hasProp = {}.hasOwnProperty;
 
   ref = require("../memory-record.js"), Collection = ref.Collection, Query = ref.Query, Rule = ref.Rule;
+
+  _ = require("lodash");
 
   describe("Collection", function() {
     it("set", function() {
       new Rule("base").schema(function() {
         this.order("_id");
         this.has_many("tests");
-        this.has_many("bases", {
-          by: "ids"
+        this.graph({
+          directed: true
         });
-        this.graph();
+        this.tree();
         return this.model = (function(superClass) {
           extend(model, superClass);
 
@@ -562,13 +554,17 @@
       Collection.base.set([
         {
           _id: 100,
+          base_id: 400,
           base_ids: [200, 300]
         }, {
-          _id: 200
+          _id: 200,
+          base_id: 100
         }, {
-          _id: 300
+          _id: 300,
+          base_id: 100
         }, {
           _id: 400,
+          base_id: 500,
           base_ids: [100, 300]
         }, {
           _id: 500,
@@ -596,23 +592,35 @@
       ]);
     });
     it("belongs to base model", function() {
-      assert.deepEqual(Query.tests.pluck("_id"), [10, 20]);
+      assert.deepEqual(Query.tests.ids, [10, 20]);
       assert.deepEqual(Query.tests.pluck("base_id"), [100, 100]);
       return assert.deepEqual(Query.tests.pluck("base._id"), [100, 100]);
     });
     it("has test model by foreign key", function() {
       assert.deepEqual(Query.bases.list[0].tests.list.length, 2);
-      return assert.deepEqual(Query.bases.list[0].tests.pluck("_id"), [10, 20]);
+      return assert.deepEqual(Query.bases.list[0].tests.ids, [10, 20]);
     });
     it("has base model by ids", function() {
       assert.deepEqual(Query.bases.list[0].base_ids, [200, 300]);
-      return assert.deepEqual(Query.bases.list[0].bases.pluck("_id"), [200, 300]);
+      return assert.deepEqual(Query.bases.list[0].bases.ids, [200, 300]);
     });
-    return it("model graph", function() {
-      assert.deepEqual(Query.bases.hash[500].nodes(0).pluck("_id"), [500]);
-      assert.deepEqual(Query.bases.hash[500].nodes(1).pluck("_id"), [300, 400, 500]);
-      assert.deepEqual(Query.bases.hash[500].nodes(2).pluck("_id"), [100, 300, 400, 500]);
-      return assert.deepEqual(Query.bases.hash[500].nodes(3).pluck("_id"), [100, 200, 300, 400, 500]);
+    it("model graph", function() {
+      assert.deepEqual(Query.bases.hash[500].path(0).ids, [500]);
+      assert.deepEqual(Query.bases.hash[500].path(1).ids, [300, 400, 500]);
+      assert.deepEqual(Query.bases.hash[500].path(2).ids, [100, 300, 400, 500]);
+      return assert.deepEqual(Query.bases.hash[500].path(3).ids, [100, 200, 300, 400, 500]);
+    });
+    it("model graph cached", function() {
+      assert.deepEqual(Query.bases["path:[[500],3]"].ids, [100, 200, 300, 400, 500]);
+      assert.deepEqual(Query.bases["path:[[500,400,300],2]"].ids, [100, 200, 300, 400, 500]);
+      assert.deepEqual(Query.bases["path:[[500,400,300,100],1]"].ids, [100, 200, 300, 400, 500]);
+      return assert.deepEqual(Query.bases["path:[[500,400,300,100,200],0]"].ids, [100, 200, 300, 400, 500]);
+    });
+    return it("model tree", function() {
+      assert.deepEqual(Query.bases.hash[500].nodes(0).ids, [500]);
+      assert.deepEqual(Query.bases.hash[500].nodes(1).ids, [400, 500]);
+      assert.deepEqual(Query.bases.hash[500].nodes(2).ids, [100, 400, 500]);
+      return assert.deepEqual(Query.bases.hash[500].nodes(3).ids, [100, 200, 300, 400, 500]);
     });
   });
 
@@ -678,10 +686,11 @@
 
   describe("Query", function() {
     it("scope call", function() {
-      return assert.deepEqual(Query.tests.topA.ids, ["10", "news"]);
-    });
-    return it("scope with argument", function() {
+      assert.deepEqual(Query.tests.topA.ids, ["10", "news"]);
       return assert.deepEqual(Query.tests.in_key("A").ids, ["10", "20", "news"]);
+    });
+    return it("scope call cached", function() {
+      return assert.deepEqual(Query.tests["in_key:[\"A\"]"].ids, ["10", "20", "news"]);
     });
   });
 

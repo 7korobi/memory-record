@@ -61,9 +61,22 @@ class Mem.Rule
         get: ->
           all[key](@[ik])
 
-  tree_base: (key, ik)->
+  relation_tree: (key, ik, qk)->
+    all = @finder.query.all
+    @finder.use_cache key, (id, n)->
+      if n
+        q = all.where "#{ik}": id
+        for k in q.pluck(qk)
+          id.push k
+        all[key] _.uniq(id), n - 1
+      else
+        all.where "#{qk}": id
 
-  graph_base: (key, ik, qk)->
+    @model.prototype[key] = (n)->
+      id = [@[qk]]
+      all[key] id, n
+
+  relation_graph: (key, ik, qk)->
     all = @finder.query.all
     @finder.use_cache key, (id, n)->
       q = all.where "#{qk}": id
@@ -100,14 +113,14 @@ class Mem.Rule
     @relation_to_many to, target, ik, qk
 
   tree: (option={})->
-    { key } = option
-    ik = key ? "#{@model_list}_id"
-    @relation_to_one "up", ik
+    { key = @model_id } = option
+    @relation_tree "nodes", key, "_id"
 
   graph: (option={})->
-    { key } = option
+    { key, directed, cost } = option
     ik = key ? @model_list.replace /s$/, "_ids"
-    @graph_base "nodes", ik, "_id"
+    @relation_to_many @model_list, @model_list, ik, "_id"
+    @relation_graph "path", ik, "_id"
 
   shuffle: ->
     query = @finder.query.all.shuffle()

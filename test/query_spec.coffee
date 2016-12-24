@@ -59,41 +59,27 @@ describe "Collection", ()->
     assert.deepEqual Query.tests.pluck("_id"), ["newnews", "news", 20, 100]
 
 describe "Query", ()->
-  it "where selection for function", ->
+  it "where selection", ->
     assert.deepEqual Query.tests.where((o)-> o.key == "C" ).pluck("_id"), ["newnews"]
-
-  it "where selection for String", ->
-    assert.deepEqual Query.tests.where(key: "A").pluck("_id"), [100, "news"]
+    assert.deepEqual Query.tests.where(key: "A").pluck("_id"), ["news", 100]
+    assert.deepEqual Query.tests.where("data.msg": /Merge/).pluck("_id"), ["newnews", "news"]
+    assert.deepEqual Query.tests.where("data.options.1": "cdefg").pluck("_id"), ["newnews", "news"]
 
   it "where selection for Array (same SQL IN)", ->
-    assert.deepEqual Query.tests.where(key: ["C","A"]).pluck("_id"), [100, "news", "newnews"]
+    assert.deepEqual Query.tests.where(key: ["C","A"]).pluck("_id"), ["newnews", "news", 100]
 
-  it "where selection for Regexp", ->
-    assert.deepEqual Query.tests.where("data.msg": /Merge/).pluck("_id"), ["news", "newnews"]
+  it "in selection", ->
+    assert.deepEqual Query.tests.in(key: "A").pluck("_id"), ["news", 20, 100]
+    assert.deepEqual Query.tests.in(list: "A").pluck("_id"), ["news", 20, 100]
+    assert.deepEqual Query.tests.in("data.options": /abcde/).pluck("_id"), ["news", 20, 100]
 
-  it "where selection for Regexp", ->
-    assert.deepEqual Query.tests.where("data.options.1": "cdefg").pluck("_id"), ["news", "newnews"]
-
-  it "in selection for String", ->
-    assert.deepEqual Query.tests.in(key: "A").pluck("_id"), [20, 100, "news"]
-
-  it "in selection for Array", ->
-    assert.deepEqual Query.tests.in(list: "A").pluck("_id"), [20, 100, "news"]
-
-  it "in selection for Regexp", ->
-    assert.deepEqual Query.tests.in("data.options": /abcde/).pluck("_id"), [20, 100, "news"]
-
-  it "sort defaults", ->
+  it "sort", ->
     assert.deepEqual Query.tests.pluck("_id"), ["newnews", "news", 20, 100]
-
-  it "sort (ascends)", ->
     assert.deepEqual Query.tests.sort("_id").pluck("_id"), [20, 100, "newnews", "news"]
-
-  it "sort ascends", ->
     assert.deepEqual Query.tests.sort(["_id"],["asc"]).pluck("_id"), [20, 100, "newnews", "news"]
-
-  it "sort descends", ->
     assert.deepEqual Query.tests.sort(["_id"],["desc"]).pluck("_id"), [100, 20, "news", "newnews"]
 
   it "shuffle", ->
-    assert.deepEqual Query.tests.shuffle().pluck("_id").sort(), [100, 20, "news", "newnews"].sort()
+    assert.deepEqual Query.tests.shuffle().pluck("_id").sort(), [100, 20, "newnews", "news"]
+    assert.notDeepEqual     Query.tests.shuffle().pluck("_id"), [100, 20, "newnews", "news"]
+    # fail per 4 * 3 * 2 * 1   if  shuffled order same as sorted.

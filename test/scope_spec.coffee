@@ -40,6 +40,8 @@ describe "Collection", ()->
 describe "Query", ()->
   it "scope call", ->
     assert.deepEqual Query.tests.topA.ids, ["10", "news"]
-
-  it "scope with argument", ->
     assert.deepEqual Query.tests.in_key("A").ids, ["10", "20", "news"]
+
+  it "scope call cached", ->
+    assert.deepEqual Query.tests["""in_key:["A"]"""].ids, ["10", "20", "news"]
+
