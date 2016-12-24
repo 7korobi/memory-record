@@ -834,88 +834,126 @@
       return results;
     };
 
-    Rule.prototype.belongs_to = function(parent, option) {
-      var dependent, parent_id, parents;
-      parents = parent + "s";
-      parent_id = parent + "_id";
-      this.inits.push((function(_this) {
+    Rule.prototype.relation_to_one = function(key, target, ik) {
+      return this.inits.push((function(_this) {
         return function() {
-          return Object.defineProperty(_this.model.prototype, parent, {
+          return Object.defineProperty(_this.model.prototype, key, {
             get: function() {
-              return Mem.Query[parents].find(this[parent_id]);
+              return Mem.Query[target].find(this[ik]);
             }
           });
         };
       })(this));
-      dependent = option != null ? option.dependent : void 0;
+    };
+
+    Rule.prototype.relation_to_many = function(key, target, ik, qk) {
+      var all;
+      all = this.finder.query.all;
+      this.finder.use_cache(key, function(id) {
+        var obj;
+        return Mem.Query[target].where((
+          obj = {},
+          obj["" + qk] = id,
+          obj
+        ));
+      });
+      return this.inits.push((function(_this) {
+        return function() {
+          return Object.defineProperty(_this.model.prototype, key, {
+            get: function() {
+              return all[key](this[ik]);
+            }
+          });
+        };
+      })(this));
+    };
+
+    Rule.prototype.tree_base = function(key, ik) {};
+
+    Rule.prototype.graph_base = function(key, ik, qk) {
+      var all;
+      all = this.finder.query.all;
+      this.finder.use_cache(key, function(id, n) {
+        var a, i, j, k, len, len1, obj, q, ref;
+        q = all.where((
+          obj = {},
+          obj["" + qk] = id,
+          obj
+        ));
+        if (n) {
+          ref = q.pluck(ik);
+          for (i = 0, len = ref.length; i < len; i++) {
+            a = ref[i];
+            if (a != null) {
+              for (j = 0, len1 = a.length; j < len1; j++) {
+                k = a[j];
+                if (key != null) {
+                  id.push(k);
+                }
+              }
+            }
+          }
+          return all[key](_.uniq(id), n - 1);
+        } else {
+          return q;
+        }
+      });
+      return this.model.prototype[key] = function(n) {
+        return all[key]([this[qk]], n);
+      };
+    };
+
+    Rule.prototype.belongs_to = function(to, option) {
+      var dependent, key, ref, ref1, target;
+      if (option == null) {
+        option = {};
+      }
+      key = (ref = option.key) != null ? ref : to + "_id", target = (ref1 = option.target) != null ? ref1 : to + "s", dependent = option.dependent;
+      this.relation_to_one(to, target, key);
       if (dependent) {
-        this.depend_on(parent);
+        this.depend_on(to);
         return this.finder.validate(function(o) {
-          return o[parent] != null;
+          return o[to] != null;
         });
       }
     };
 
-    Rule.prototype.has_many_by_foreign_key = function(children, option) {
-      var all, key, ref;
+    Rule.prototype.has_many = function(to, option) {
+      var ik, key, qk, ref, target;
       if (option == null) {
         option = {};
       }
-      all = this.finder.query.all;
-      key = (ref = option.key) != null ? ref : this.model_id;
-      this.finder.use_cache(children, function(id) {
-        var query, ref1;
-        query = (ref1 = option.query) != null ? ref1 : Mem.Query[children];
-        return query.where(function(o) {
-          return o[key] === id;
-        });
-      });
-      return this.inits.push((function(_this) {
-        return function() {
-          return Object.defineProperty(_this.model.prototype, children, {
-            get: function() {
-              return all[children](this._id);
-            }
-          });
-        };
-      })(this));
-    };
-
-    Rule.prototype.has_many_by_ids = function(children, option) {
-      var all, key, ref;
-      if (option == null) {
-        option = {};
-      }
-      all = this.finder.query.all;
-      key = (ref = option.key) != null ? ref : children.replace(/s$/, "_ids");
-      this.finder.use_cache(children, function(ids) {
-        var query, ref1;
-        query = (ref1 = option.query) != null ? ref1 : Mem.Query[children];
-        return query.where({
-          id: ids
-        });
-      });
-      return this.inits.push((function(_this) {
-        return function() {
-          return Object.defineProperty(_this.model.prototype, children, {
-            get: function() {
-              return all[children](this[key]);
-            }
-          });
-        };
-      })(this));
-    };
-
-    Rule.prototype.has_many = function(children, option) {
-      if (option == null) {
-        option = {};
-      }
+      key = option.key, target = (ref = option.target) != null ? ref : to;
       switch (option.by) {
         case "ids":
-          return this.has_many_by_ids(children, option);
+          ik = key != null ? key : to.replace(/s$/, "_ids");
+          qk = "_id";
+          break;
         default:
-          return this.has_many_by_foreign_key(children, option);
+          ik = "_id";
+          qk = key != null ? key : this.model_id;
       }
+      return this.relation_to_many(to, target, ik, qk);
+    };
+
+    Rule.prototype.tree = function(option) {
+      var ik, key;
+      if (option == null) {
+        option = {};
+      }
+      key = option.key;
+      ik = key != null ? key : this.model_list + "_id";
+      return this.relation_to_one("up", ik);
+    };
+
+    Rule.prototype.graph = function(option) {
+      var ik, key;
+      if (option == null) {
+        option = {};
+      }
+      key = option.key;
+      ik = key != null ? key : this.model_list.replace(/s$/, "_ids");
+      return this.graph_base("nodes", ik, "_id");
     };
 
     Rule.prototype.shuffle = function() {

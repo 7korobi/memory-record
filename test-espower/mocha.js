@@ -532,6 +532,7 @@
         this.has_many("bases", {
           by: "ids"
         });
+        this.graph();
         return this.model = (function(superClass) {
           extend(model, superClass);
 
@@ -566,6 +567,12 @@
           _id: 200
         }, {
           _id: 300
+        }, {
+          _id: 400,
+          base_ids: [100, 300]
+        }, {
+          _id: 500,
+          base_ids: [400, 300]
         }
       ]);
       return Collection.test.set([
@@ -590,14 +597,22 @@
     });
     it("belongs to base model", function() {
       assert.deepEqual(Query.tests.pluck("_id"), [10, 20]);
+      assert.deepEqual(Query.tests.pluck("base_id"), [100, 100]);
       return assert.deepEqual(Query.tests.pluck("base._id"), [100, 100]);
     });
     it("has test model by foreign key", function() {
+      assert.deepEqual(Query.bases.list[0].tests.list.length, 2);
       return assert.deepEqual(Query.bases.list[0].tests.pluck("_id"), [10, 20]);
     });
-    return it("has base model by ids", function() {
+    it("has base model by ids", function() {
       assert.deepEqual(Query.bases.list[0].base_ids, [200, 300]);
       return assert.deepEqual(Query.bases.list[0].bases.pluck("_id"), [200, 300]);
+    });
+    return it("model graph", function() {
+      assert.deepEqual(Query.bases.hash[500].nodes(0).pluck("_id"), [500]);
+      assert.deepEqual(Query.bases.hash[500].nodes(1).pluck("_id"), [300, 400, 500]);
+      assert.deepEqual(Query.bases.hash[500].nodes(2).pluck("_id"), [100, 300, 400, 500]);
+      return assert.deepEqual(Query.bases.hash[500].nodes(3).pluck("_id"), [100, 200, 300, 400, 500]);
     });
   });
 

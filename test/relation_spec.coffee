@@ -7,6 +7,7 @@ describe "Collection", ()->
       @order "_id"
       @has_many "tests"
       @has_many "bases", by: "ids"
+      @graph()
       class @model extends @model
 
     new Rule("test").schema ->
@@ -20,6 +21,12 @@ describe "Collection", ()->
       _id: 200
     ,
       _id: 300
+    ,
+      _id: 400
+      base_ids: [ 100, 300]
+    ,
+      _id: 500
+      base_ids: [ 400, 300]
     ]
     Collection.test.set [
       _id: 10
@@ -41,11 +48,20 @@ describe "Collection", ()->
 
   it "belongs to base model", ->
     assert.deepEqual Query.tests.pluck("_id"), [10, 20]
+    assert.deepEqual Query.tests.pluck("base_id"), [100, 100]
     assert.deepEqual Query.tests.pluck("base._id"), [100, 100]
 
   it "has test model by foreign key", ->
+    assert.deepEqual Query.bases.list[0].tests.list.length, 2
     assert.deepEqual Query.bases.list[0].tests.pluck("_id"), [10, 20]
 
   it "has base model by ids", ->
     assert.deepEqual Query.bases.list[0].base_ids,           [200, 300]
     assert.deepEqual Query.bases.list[0].bases.pluck("_id"), [200, 300]
+
+  it "model graph", ->
+    assert.deepEqual Query.bases.hash[500].nodes(0).pluck("_id"), [500]
+    assert.deepEqual Query.bases.hash[500].nodes(1).pluck("_id"), [300, 400, 500]
+    assert.deepEqual Query.bases.hash[500].nodes(2).pluck("_id"), [100, 300, 400, 500]
+    assert.deepEqual Query.bases.hash[500].nodes(3).pluck("_id"), [100, 200, 300, 400, 500]
+

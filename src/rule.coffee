@@ -45,53 +45,69 @@ class Mem.Rule
     for key, query_call of @finder.scope
       @finder.use_cache key, query_call
 
-  belongs_to: (parent, option)->
-    parents = "#{parent}s"
-    parent_id = "#{parent}_id"
+  relation_to_one: (key, target, ik)->
+    @inits.push =>
+      Object.defineProperty @model.prototype, key,
+        get: ->
+          Mem.Query[target].find(@[ik])
+
+  relation_to_many: (key, target, ik, qk)->
+    all = @finder.query.all
+    @finder.use_cache key, (id)->
+      Mem.Query[target].where "#{qk}": id
 
     @inits.push =>
-      Object.defineProperty @model.prototype, parent,
+      Object.defineProperty @model.prototype, key,
         get: ->
-          Mem.Query[parents].find @[parent_id]
+          all[key](@[ik])
 
-    dependent = option?.dependent
+  tree_base: (key, ik)->
+
+  graph_base: (key, ik, qk)->
+    all = @finder.query.all
+    @finder.use_cache key, (id, n)->
+      q = all.where "#{qk}": id
+      if n
+        for a in q.pluck(ik) when a?
+          for k in a when key?
+            id.push k
+
+        all[key] _.uniq(id), n - 1
+      else
+        q
+
+    @model.prototype[key] = (n)->
+      all[key] [@[qk]], n
+
+  belongs_to: (to, option = {})->
+    { key = "#{to}_id", target = "#{to}s", dependent } = option
+    @relation_to_one to, target, key
+
     if dependent
-      @depend_on parent
+      @depend_on to
       @finder.validate (o)->
-        o[parent]?
+        o[to]?
 
-  has_many_by_foreign_key: (children, option = {})->
-    all = @finder.query.all
-    { key = @model_id } = option
-
-    @finder.use_cache children, (id)->
-      { query = Mem.Query[children] } = option
-      query.where (o)-> o[key] == id
-
-    @inits.push =>
-      Object.defineProperty @model.prototype, children,
-        get: ->
-          all[children](@._id)
-
-  has_many_by_ids: (children, option = {})->
-    all = @finder.query.all
-    { key = children.replace /s$/, "_ids" } = option
-
-    @finder.use_cache children, (ids)->
-      { query = Mem.Query[children] } = option
-      query.where(id: ids)
-
-    @inits.push =>
-      Object.defineProperty @model.prototype, children,
-        get: ->
-          all[children](@[key])
-
-  has_many: (children, option = {})->
+  has_many: (to, option = {})->
+    { key, target = to } = option
     switch option.by
       when "ids"
-        @has_many_by_ids children, option
+        ik = key ? to.replace /s$/, "_ids"
+        qk = "_id"
       else
-        @has_many_by_foreign_key children, option
+        ik = "_id"
+        qk = key ? @model_id
+    @relation_to_many to, target, ik, qk
+
+  tree: (option={})->
+    { key } = option
+    ik = key ? "#{@model_list}_id"
+    @relation_to_one "up", ik
+
+  graph: (option={})->
+    { key } = option
+    ik = key ? @model_list.replace /s$/, "_ids"
+    @graph_base "nodes", ik, "_id"
 
   shuffle: ->
     query = @finder.query.all.shuffle()

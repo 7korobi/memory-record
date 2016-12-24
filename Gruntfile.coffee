@@ -45,6 +45,7 @@ module.exports = (grunt)->
     mochaTest:
       test:
         options:
+          reporter: "min"
           require: "intelli-espower-loader"
         src: ["test-espower/**/*.js"]
 
