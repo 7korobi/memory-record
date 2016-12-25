@@ -24,12 +24,12 @@ class Mem.Base.Collection
   reset:  f_reset
 
   merge:  f_merge
-
   reject: f_remove
 
   add:    f_item f_merge
   append: f_item f_merge
   create: f_item f_merge
+  del:    f_item f_merge
   remove: f_item f_remove
 
   clear_cache: f_composite

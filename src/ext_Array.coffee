@@ -12,11 +12,6 @@ Object.defineProperties Array.prototype,
   last:
     get: -> @[@length - 1]
 
-  cycle:
-    value: (n)->
-      for idx in [0..n]
-        @[idx % @length]
-
 
 
 

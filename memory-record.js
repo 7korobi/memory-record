@@ -1,6 +1,6 @@
 /**
  memory-record - activerecord like in-memory data manager
- @version v0.2.9
+ @version v0.2.11
  @link https://github.com/7korobi/memory-record
  @license 
 **/
@@ -65,6 +65,8 @@
 
     Collection.prototype.create = f_item(f_merge);
 
+    Collection.prototype.del = f_item(f_merge);
+
     Collection.prototype.remove = f_item(f_remove);
 
     Collection.prototype.clear_cache = f_composite;
@@ -95,28 +97,23 @@
   };
 
   each = function(from, process) {
-    var i, id, item, len, ref, ref1;
+    var i, id, item, len;
     switch (from != null ? from.constructor : void 0) {
       case Array:
-        ref = from || [];
-        for (i = 0, len = ref.length; i < len; i++) {
-          item = ref[i];
-          if (!item) {
-            continue;
-          }
+        for (i = 0, len = from.length; i < len; i++) {
+          item = from[i];
           process(item);
         }
         break;
       case Object:
-        ref1 = from || {};
-        for (id in ref1) {
-          item = ref1[id];
-          if (!item) {
-            continue;
-          }
+        for (id in from) {
+          item = from[id];
           item._id = id;
           process(item);
         }
+        break;
+      default:
+        throw new Error("detect bad data: " + (JSON.stringify(from)));
     }
   };
 
@@ -354,7 +351,10 @@
             item[key] = val;
           }
           item.__proto__ = _this.model.prototype;
-          _this.model.call(item, item, _this.model);
+          _this.model.call(item, _this.model);
+          if (!item._id) {
+            throw new Error("detect bad data: " + (JSON.stringify(item)));
+          }
           _this.model.rowid++;
           every = true;
           ref = _this.validates;
@@ -412,12 +412,12 @@
 
     Model["delete"] = function(old) {};
 
-    function Model(o, m) {
-      if (!o._id) {
-        o._id = o[m.id];
+    function Model(m) {
+      if (!this._id) {
+        this._id = this[m.id];
       }
-      if (!o[m.id]) {
-        o[m.id] = o._id;
+      if (!this[m.id]) {
+        this[m.id] = this._id;
       }
     }
 
@@ -747,16 +747,6 @@
     last: {
       get: function() {
         return this[this.length - 1];
-      }
-    },
-    cycle: {
-      value: function(n) {
-        var i, idx, ref, results;
-        results = [];
-        for (idx = i = 0, ref = n; 0 <= ref ? i <= ref : i >= ref; idx = 0 <= ref ? ++i : --i) {
-          results.push(this[idx % this.length]);
-        }
-        return results;
       }
     }
   });

@@ -6,14 +6,14 @@ OBJ = ->
 each = (from, process)->
   switch from?.constructor
     when Array
-      for item in from || []
-        continue unless item
+      for item in from
         process(item)
     when Object
-      for id, item of from || {}
-        continue unless item
+      for id, item of from
         item._id = id
         process(item)
+    else
+      throw new Error "detect bad data: #{JSON.stringify from}"
   return
 
 Mem = module.exports
@@ -162,7 +162,9 @@ class Mem.Base.Finder
       for key, val of parent
         item[key] = val
       item.__proto__ = @model.prototype
-      @model.call item, item, @model
+      @model.call item, @model
+      unless item._id
+        throw new Error "detect bad data: #{JSON.stringify item}"
       @model.rowid++
 
       every = true

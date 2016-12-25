@@ -6,7 +6,7 @@ class Mem.Base.Model
   @create: (item)->
   @delete: (old)->
 
-  constructor: (o, m)->
-    o._id = o[m.id] unless o._id
-    o[m.id] = o._id unless o[m.id]
+  constructor: (m)->
+    @_id = @[m.id] unless @_id
+    @[m.id] = @_id unless @[m.id]
 

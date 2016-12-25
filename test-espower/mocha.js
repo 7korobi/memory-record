@@ -50,120 +50,96 @@
 
   describe("Query", function() {
     var dml;
-    new Rule("collection_spec").schema(function() {});
+    new Rule("collection_spec").schema(function() {
+      return this.order("_id");
+    });
     dml = Collection.collection_spec;
-    dml.set([
-      {
-        _id: 20
-      }
-    ]);
-    dml.reset([
-      {
-        _id: 10
-      }, {
-        _id: 30
-      }
-    ]);
-    dml.merge([
-      {
-        _id: 40
-      }, {
-        _id: 50
-      }
-    ]);
-    dml.add({
-      _id: 60
+    it("data refresh", function() {
+      dml.clear_cache();
+      dml.refresh();
+      return dml.rehash();
     });
-    dml.append({
-      _id: 70
-    });
-    dml.create({
-      _id: 80
-    });
-    dml.add({
-      _id: 100
-    });
-    dml.add({
-      _id: 110
-    });
-    dml.add({
-      _id: 120
-    });
-    dml.reject([
-      {
-        _id: 100
-      }, {
-        _id: 110
-      }
-    ]);
-    dml.remove({
-      _id: 120
-    });
-    dml.clear_cache();
-    dml.refresh();
-    dml.rehash();
-    return it("ids", function() {
-      return assert.deepEqual(Query.collection_specs.ids, ["10", "30", "40", "50", "60", "70", "80"]);
-    });
-  });
-
-}).call(this);
-
-(function() {
-  var Collection, Query, Rule, ref;
-
-  ref = require("../memory-record.js"), Collection = ref.Collection, Query = ref.Query, Rule = ref.Rule;
-
-  describe("Collection", function() {
-    it("reset Array, add Object", function() {
-      new Rule("test").schema(function() {});
-      Collection.test.reset([
+    it("data set methods", function() {
+      dml.reset([
         {
-          _id: 10,
-          data: {
-            msg: "Hello World!"
-          }
+          _id: 10
         }, {
-          _id: 20,
-          data: {
-            msg: "Bye World!"
-          }
+          _id: 30
         }
       ]);
-      Collection.test.add({
-        _id: "news",
-        data: {
-          msg: "Merge World!"
+      assert.deepEqual(Query.collection_specs.ids, [10, 30]);
+      dml.set([
+        {
+          _id: 20
         }
-      });
-      return assert.deepEqual(Query.tests.ids, ["10", "20", "news"]);
+      ]);
+      return assert.deepEqual(Query.collection_specs.ids, [20]);
     });
-    it("reset Hash", function() {
-      new Rule("test").schema(function() {});
-      Collection.test.reset({
-        10: {
-          data: {
-            msg: "Hello World!"
-          }
-        },
-        20: {
-          data: {
-            msg: "Bye World!"
-          }
-        },
-        news: {
-          data: {
-            msg: "Merge World!"
-          }
+    it("data append methods", function() {
+      dml.merge([
+        {
+          _id: 40
+        }, {
+          _id: 50
         }
+      ]);
+      assert.deepEqual(Query.collection_specs.ids, [20, 40, 50]);
+      dml.add({
+        _id: 60
       });
-      return assert.deepEqual(Query.tests.ids, ["10", "20", "news"]);
+      assert.deepEqual(Query.collection_specs.ids, [20, 40, 50, 60]);
+      dml.append({
+        _id: 70
+      });
+      assert.deepEqual(Query.collection_specs.ids, [20, 40, 50, 60, 70]);
+      dml.create({
+        _id: 80
+      });
+      return assert.deepEqual(Query.collection_specs.ids, [20, 40, 50, 60, 70, 80]);
     });
-    return it("remove", function() {
-      Collection.test.remove({
-        _id: 20
+    it("data set & append for hash data", function() {
+      dml.set({
+        10: {},
+        20: {}
       });
-      return assert.deepEqual(Query.tests.ids, ["10", "news"]);
+      assert.deepEqual(Query.collection_specs.ids, [10, 20]);
+      dml.merge({
+        100: {},
+        110: {},
+        120: {}
+      });
+      return assert.deepEqual(Query.collection_specs.ids, [10, 20, 100, 110, 120]);
+    });
+    it("remove methods", function() {
+      dml.reject([
+        {
+          _id: 100
+        }, {
+          _id: 110
+        }
+      ]);
+      assert.deepEqual(Query.collection_specs.ids, [10, 20, 120]);
+      dml.remove({
+        _id: 120
+      });
+      return assert.deepEqual(Query.collection_specs.ids, [10, 20]);
+    });
+    it("remove without data", function() {
+      dml.remove({
+        _id: 999
+      });
+      return assert.deepEqual(Query.collection_specs.ids, [10, 20]);
+    });
+    return it("add bad data", function() {
+      assert.throws(function() {
+        return dml.set("bad data");
+      });
+      return assert.throws(function() {
+        return dml.set({
+          10: "bad data 2",
+          20: "bad data 3"
+        });
+      });
     });
   });
 
@@ -403,7 +379,52 @@
 }).call(this);
 
 (function() {
+  var Collection, Query, Rule, ref,
+    extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
+    hasProp = {}.hasOwnProperty;
 
+  ref = require("../memory-record.js"), Collection = ref.Collection, Query = ref.Query, Rule = ref.Rule;
+
+  new Rule("model_spec").schema(function() {
+    return this.model = (function(superClass) {
+      extend(model, superClass);
+
+      model.update = function(item, old) {};
+
+      model.create = function(item) {};
+
+      model["delete"] = function(old) {};
+
+      function model(arg) {
+        this.rowid = arg.rowid;
+      }
+
+      return model;
+
+    })(this.model);
+  });
+
+  it("", function() {
+    Collection.model_spec.merge({
+      3: {},
+      2: {},
+      1: {}
+    });
+    return assert.deepEqual(Query.model_specs.hash, {
+      1: {
+        _id: 1,
+        rowid: 0
+      },
+      2: {
+        _id: 2,
+        rowid: 1
+      },
+      3: {
+        _id: 3,
+        rowid: 2
+      }
+    });
+  });
 
 }).call(this);
 

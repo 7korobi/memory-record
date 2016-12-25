@@ -3,45 +3,78 @@ assert = require "power-assert"
 
 describe "Query", ()->
   new Rule("collection_spec").schema ->
+    @order "_id"
   dml = Collection.collection_spec
-  dml.set [
-    { _id: 20 }
-  ]
-  dml.reset [
-    { _id: 10 }
-    { _id: 30 }
-  ]
-  dml.merge [
-    { _id: 40 }
-    { _id: 50 }
-  ]
 
-  dml.add
-    _id: 60
-  dml.append
-    _id: 70
-  dml.create
-    _id: 80
+  it "data refresh", ->
+    dml.clear_cache()
+    dml.refresh()
+    dml.rehash()
 
+  it "data set methods", ->
+    dml.reset [
+      { _id: 10 }
+      { _id: 30 }
+    ]
+    assert.deepEqual Query.collection_specs.ids, [10, 30]
 
-  dml.add
-    _id: 100
-  dml.add
-    _id: 110
-  dml.add
-    _id: 120
+    dml.set [
+      { _id: 20 }
+    ]
+    assert.deepEqual Query.collection_specs.ids, [20]
 
-  dml.reject [
-    { _id: 100 }
-    { _id: 110 }
-  ]
+  it "data append methods", ->
+    dml.merge [
+      { _id: 40 }
+      { _id: 50 }
+    ]
+    assert.deepEqual Query.collection_specs.ids, [20, 40, 50]
 
-  dml.remove
-    _id: 120
+    dml.add
+      _id: 60
+    assert.deepEqual Query.collection_specs.ids, [20, 40, 50, 60]
 
-  dml.clear_cache()
-  dml.refresh()
-  dml.rehash()
+    dml.append
+      _id: 70
+    assert.deepEqual Query.collection_specs.ids, [20, 40, 50, 60, 70]
 
-  it "ids", ->
-    assert.deepEqual Query.collection_specs.ids, ["10", "30", "40", "50", "60", "70", "80"]
+    dml.create
+      _id: 80
+    assert.deepEqual Query.collection_specs.ids, [20, 40, 50, 60, 70, 80]
+
+  it "data set & append for hash data", ->
+    dml.set
+      10: {}
+      20: {}
+    assert.deepEqual Query.collection_specs.ids, [10, 20]
+
+    dml.merge
+      100: {}
+      110: {}
+      120: {}
+    assert.deepEqual Query.collection_specs.ids, [10, 20, 100, 110, 120]
+
+  it "remove methods", ->
+    dml.reject [
+      { _id: 100 }
+      { _id: 110 }
+    ]
+    assert.deepEqual Query.collection_specs.ids, [10, 20, 120]
+
+    dml.remove
+      _id: 120
+    assert.deepEqual Query.collection_specs.ids, [10, 20]
+
+  it "remove without data", ->
+    dml.remove
+      _id: 999
+    assert.deepEqual Query.collection_specs.ids, [10, 20]
+
+  it "add bad data", ->
+    assert.throws ->
+      dml.set "bad data"
+    assert.throws ->
+      dml.set
+        10: "bad data 2"
+        20: "bad data 3"
+
