@@ -5,9 +5,9 @@ describe "Collection", ()->
   it "set", ->
     new Rule("base").schema ->
       @order "_id"
-      @has_many "tests"
       @graph directed: true
       @tree()
+      @has_many "tests"
       class @model extends @model
 
     new Rule("test").schema ->

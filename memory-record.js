@@ -764,21 +764,27 @@
 }).call(this);
 
 (function() {
-  var Mem, _,
+  var Mem, _, rename,
     extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
     hasProp = {}.hasOwnProperty,
     slice = [].slice;
 
   _ = require("lodash");
 
+  rename = {};
+
   Mem = module.exports;
 
   Mem.Rule = (function() {
-    function Rule(field) {
-      this.field = field;
-      this.model_id = this.field + "_id";
-      this.model_list = this.field + "s";
-      this.depend_on(this.field);
+    function Rule(base) {
+      this.name = rename[base] = {
+        id: base + "_id",
+        ids: base + "_ids",
+        list: base + "s",
+        base: base
+      };
+      rename[this.name.list] = this.name;
+      this.depend_on(base);
       this.finder = new Mem.Base.Finder("_id");
       this.model = Mem.Base.Model;
       this.dml = new Mem.Base.Collection(this);
@@ -788,8 +794,8 @@
     Rule.prototype.schema = function(cb) {
       var i, init, len, ref;
       cb.call(this, this.dml);
-      this.model.id = this.model_id;
-      this.model.list = this.model_list;
+      this.model.id = this.name.id;
+      this.model.list = this.name.list;
       if (this.model === Mem.Base.Model) {
         this.model = (function(superClass) {
           extend(model, superClass);
@@ -807,15 +813,15 @@
         init = ref[i];
         init();
       }
-      Mem.Model[this.field] = this.finder.model = this.model;
-      Mem.Collection[this.field] = this.dml;
-      Mem.Query[this.model_list] = this.finder.query.all;
+      Mem.Model[this.name.base] = this.finder.model = this.model;
+      Mem.Collection[this.name.base] = this.dml;
+      Mem.Query[this.name.list] = this.finder.query.all;
       return this;
     };
 
     Rule.prototype.composite = function() {
       var f, i, len, ref;
-      ref = Mem.Composite[this.field];
+      ref = Mem.Composite[this.name.base];
       for (i = 0, len = ref.length; i < len; i++) {
         f = ref[i];
         f();
@@ -823,9 +829,9 @@
     };
 
     Rule.prototype.depend_on = function(parent) {
-      var base;
-      if ((base = Mem.Composite)[parent] == null) {
-        base[parent] = [];
+      var base1;
+      if ((base1 = Mem.Composite)[parent] == null) {
+        base1[parent] = [];
       }
       return Mem.Composite[parent].push(function() {
         return Mem.Collection[parent].rule.finder.rehash();
@@ -944,11 +950,12 @@
     };
 
     Rule.prototype.belongs_to = function(to, option) {
-      var dependent, key, ref, ref1, target;
+      var dependent, key, name, ref, ref1, target;
       if (option == null) {
         option = {};
       }
-      key = (ref = option.key) != null ? ref : to + "_id", target = (ref1 = option.target) != null ? ref1 : to + "s", dependent = option.dependent;
+      name = rename[to];
+      key = (ref = option.key) != null ? ref : name.id, target = (ref1 = option.target) != null ? ref1 : name.list, dependent = option.dependent;
       this.relation_to_one(to, target, key);
       if (dependent) {
         this.depend_on(to);
@@ -959,55 +966,58 @@
     };
 
     Rule.prototype.has_many = function(to, option) {
-      var ik, key, qk, ref, target;
+      var ik, key, name, qk, ref, target;
       if (option == null) {
         option = {};
       }
       key = option.key, target = (ref = option.target) != null ? ref : to;
+      name = rename[to];
       switch (option.by) {
         case "ids":
-          ik = key != null ? key : to.replace(/s$/, "_ids");
+          ik = key != null ? key : name.ids;
           qk = "_id";
           break;
         default:
           ik = "_id";
-          qk = key != null ? key : this.model_id;
+          qk = key != null ? key : this.name.id;
       }
       return this.relation_to_many(to, target, ik, qk);
     };
 
     Rule.prototype.tree = function(option) {
-      var key, ref;
       if (option == null) {
         option = {};
       }
-      key = (ref = option.key) != null ? ref : this.model_id;
-      return this.relation_tree("nodes", key, "_id");
+      this.relation_tree("nodes", this.name.id, "_id");
+      return this.belongs_to(this.name.base);
     };
 
     Rule.prototype.graph = function(option) {
-      var cost, directed, ik, key;
+      var cost, directed, ik;
       if (option == null) {
         option = {};
       }
-      key = option.key, directed = option.directed, cost = option.cost;
-      ik = key != null ? key : this.model_list.replace(/s$/, "_ids");
-      this.relation_to_many(this.model_list, this.model_list, ik, "_id");
-      return this.relation_graph("path", ik, "_id");
+      directed = option.directed, cost = option.cost;
+      ik = this.name.ids;
+      this.relation_to_many(this.name.list, this.name.list, ik, "_id");
+      this.relation_graph("path", ik, "_id");
+      if (!directed) {
+        return true;
+      }
     };
 
     Rule.prototype.shuffle = function() {
       var query;
       query = this.finder.query.all.shuffle();
       query._memory = this.finder.query.all._memory;
-      return Mem.Query[this.model_list] = this.finder.query.all = query;
+      return Mem.Query[this.name.list] = this.finder.query.all = query;
     };
 
     Rule.prototype.order = function(sortBy, orderBy) {
       var query;
       query = this.finder.query.all.sort(sortBy, orderBy);
       query._memory = this.finder.query.all._memory;
-      return Mem.Query[this.model_list] = this.finder.query.all = query;
+      return Mem.Query[this.name.list] = this.finder.query.all = query;
     };
 
     Rule.prototype.protect = function() {

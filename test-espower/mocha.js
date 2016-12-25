@@ -520,11 +520,11 @@
     it("set", function() {
       new Rule("base").schema(function() {
         this.order("_id");
-        this.has_many("tests");
         this.graph({
           directed: true
         });
         this.tree();
+        this.has_many("tests");
         return this.model = (function(superClass) {
           extend(model, superClass);
 

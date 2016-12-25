@@ -1,13 +1,18 @@
 _ = require "lodash"
 
-
+rename = {}
 Mem = module.exports
 
 class Mem.Rule
-  constructor: (@field)->
-    @model_id   = "#{@field}_id"
-    @model_list = "#{@field}s"
-    @depend_on @field
+  constructor: (base)->
+    @name = rename[base] =
+      id:    "#{base}_id"
+      ids:   "#{base}_ids"
+      list:  "#{base}s"
+      base:  base
+    rename[@name.list] = @name
+
+    @depend_on base
 
     @finder = new Mem.Base.Finder "_id"
     @model = Mem.Base.Model
@@ -17,21 +22,21 @@ class Mem.Rule
 
   schema: (cb)->
     cb.call @, @dml
-    @model.id   = @model_id
-    @model.list = @model_list
+    @model.id   = @name.id
+    @model.list = @name.list
     if @model == Mem.Base.Model
       class @model extends @model
 
     for init in @inits
       init()
 
-    Mem.Model[@field] = @finder.model = @model
-    Mem.Collection[@field] = @dml
-    Mem.Query[@model_list] = @finder.query.all
+    Mem.Model[@name.base] = @finder.model = @model
+    Mem.Collection[@name.base] = @dml
+    Mem.Query[@name.list] = @finder.query.all
     @
 
   composite: ->
-    for f in Mem.Composite[@field]
+    for f in Mem.Composite[@name.base]
       f()
     return
 
@@ -93,7 +98,8 @@ class Mem.Rule
       all[key] [@[qk]], n
 
   belongs_to: (to, option = {})->
-    { key = "#{to}_id", target = "#{to}s", dependent } = option
+    name = rename[to]
+    { key = name.id, target = name.list, dependent } = option
     @relation_to_one to, target, key
 
     if dependent
@@ -103,34 +109,37 @@ class Mem.Rule
 
   has_many: (to, option = {})->
     { key, target = to } = option
+    name = rename[to]
     switch option.by
       when "ids"
-        ik = key ? to.replace /s$/, "_ids"
+        ik = key ? name.ids
         qk = "_id"
       else
         ik = "_id"
-        qk = key ? @model_id
+        qk = key ? @name.id
     @relation_to_many to, target, ik, qk
 
   tree: (option={})->
-    { key = @model_id } = option
-    @relation_tree "nodes", key, "_id"
+    @relation_tree "nodes", @name.id, "_id"
+    @belongs_to @name.base
 
   graph: (option={})->
-    { key, directed, cost } = option
-    ik = key ? @model_list.replace /s$/, "_ids"
-    @relation_to_many @model_list, @model_list, ik, "_id"
+    { directed, cost } = option
+    ik = @name.ids
+    @relation_to_many @name.list, @name.list, ik, "_id"
     @relation_graph "path", ik, "_id"
+    unless directed
+      true # todo
 
   shuffle: ->
     query = @finder.query.all.shuffle()
     query._memory = @finder.query.all._memory
-    Mem.Query[@model_list] = @finder.query.all = query
+    Mem.Query[@name.list] = @finder.query.all = query
 
   order: (sortBy, orderBy)->
     query = @finder.query.all.sort sortBy, orderBy
     query._memory = @finder.query.all._memory
-    Mem.Query[@model_list] = @finder.query.all = query
+    Mem.Query[@name.list] = @finder.query.all = query
 
   protect: (keys...)->
     @protect = (o, old)->
