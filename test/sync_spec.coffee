@@ -1,7 +1,7 @@
 { Collection, Query, Rule } = require("../memory-record.js")
 
 
-describe "Collection", ()->
+describe "sync", ()->
   it "set", ->
     new Rule("test").schema ->
 

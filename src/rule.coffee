@@ -2,6 +2,9 @@ _ = require "lodash"
 
 _rename = {}
 rename = (base)->
+  name = _rename[base]
+  return name if name
+
   id =   "#{base}_id"
   ids =  "#{base}_ids"
   list = "#{base}s"
@@ -108,8 +111,8 @@ class Mem.Rule
         o[to]?
 
   has_many: (to, option = {})->
-    { key, target = to } = option
-    name = rename to
+    name = rename to.replace /s$/, ""
+    { key, target = name.list } = option
     switch option.by
       when "ids"
         ik = key ? name.ids
@@ -117,7 +120,7 @@ class Mem.Rule
       else
         ik = "_id"
         qk = key ? @name.id
-    @relation_to_many to, target, ik, qk
+    @relation_to_many name.list, target, ik, qk
 
   tree: (option={})->
     @relation_tree "nodes", @name.id, "_id"

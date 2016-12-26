@@ -1,6 +1,6 @@
 /**
  memory-record - activerecord like in-memory data manager
- @version v0.2.14
+ @version v0.2.16
  @link https://github.com/7korobi/memory-record
  @license 
 **/
@@ -765,7 +765,11 @@
   _rename = {};
 
   rename = function(base) {
-    var id, ids, list;
+    var id, ids, list, name;
+    name = _rename[base];
+    if (name) {
+      return name;
+    }
     id = base + "_id";
     ids = base + "_ids";
     list = base + "s";
@@ -968,8 +972,8 @@
       if (option == null) {
         option = {};
       }
-      key = option.key, target = (ref = option.target) != null ? ref : to;
-      name = rename(to);
+      name = rename(to.replace(/s$/, ""));
+      key = option.key, target = (ref = option.target) != null ? ref : name.list;
       switch (option.by) {
         case "ids":
           ik = key != null ? key : name.ids;
@@ -979,7 +983,7 @@
           ik = "_id";
           qk = key != null ? key : this.name.id;
       }
-      return this.relation_to_many(to, target, ik, qk);
+      return this.relation_to_many(name.list, target, ik, qk);
     };
 
     Rule.prototype.tree = function(option) {

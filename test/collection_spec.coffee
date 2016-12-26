@@ -1,7 +1,7 @@
 assert = require "power-assert"
 { Collection, Query, Rule } = require("../memory-record.js")
 
-describe "Query", ()->
+describe "Collection", ()->
   new Rule("collection_spec").schema ->
     @order "_id"
   dml = Collection.collection_spec

@@ -1,6 +1,6 @@
 { Collection, Query, Rule } = require("../memory-record.js")
 
-describe "Query", ()->
+describe "Finder", ()->
   new Rule("finder_spec").schema ->
   Collection.finder_spec.set [
     _id: 10

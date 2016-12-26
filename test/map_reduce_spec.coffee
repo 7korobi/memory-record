@@ -22,7 +22,7 @@ for n in [1..100]
     _id: n
     type: "ABCDE"[n % 5]
 
-describe "Query", ()->
+describe "map_reduce", ()->
   it "set", ->
     assert Query.map_reduce_specs.list.length == 100
 

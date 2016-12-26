@@ -48,7 +48,7 @@
 
   ref = require("../memory-record.js"), Collection = ref.Collection, Query = ref.Query, Rule = ref.Rule;
 
-  describe("Query", function() {
+  describe("Collection", function() {
     var dml;
     new Rule("collection_spec").schema(function() {
       return this.order("_id");
@@ -166,7 +166,7 @@
 
   ref = require("../memory-record.js"), Collection = ref.Collection, Query = ref.Query, Rule = ref.Rule;
 
-  describe("Query", function() {
+  describe("Finder", function() {
     new Rule("finder_spec").schema(function() {});
     Collection.finder_spec.set([
       {
@@ -288,7 +288,7 @@
     });
   }
 
-  describe("Query", function() {
+  describe("map_reduce", function() {
     it("set", function() {
       return assert(Query.map_reduce_specs.list.length === 100);
     });
@@ -414,87 +414,86 @@
     })(this.model);
   });
 
-  it("rowid sequence", function() {
-    Model.model_spec.create = function(item) {
-      return item.rowid = this.rowid;
-    };
-    Collection.model_spec.merge({
-      3: {},
-      2: {},
-      1: {}
+  describe("Model", function() {
+    it("rowid sequence", function() {
+      Model.model_spec.create = function(item) {
+        return item.rowid = this.rowid;
+      };
+      Collection.model_spec.merge({
+        3: {},
+        2: {},
+        1: {}
+      });
+      assert.deepEqual(Query.model_specs.list, [
+        {
+          _id: 1,
+          rowid: 0,
+          model_spec_id: 1
+        }, {
+          _id: 2,
+          rowid: 1,
+          model_spec_id: 2
+        }, {
+          _id: 3,
+          rowid: 2,
+          model_spec_id: 3
+        }
+      ]);
+      return assert(Model.model_spec.rowid = 3);
     });
-    assert.deepEqual(Query.model_specs.list, [
-      {
-        _id: 1,
-        rowid: 0,
-        model_spec_id: 1
-      }, {
-        _id: 2,
-        rowid: 1,
-        model_spec_id: 2
-      }, {
+    it("catch create event", function() {
+      Model.model_spec.create = function(item) {
+        item.rowid = this.rowid;
+        return item.created = true;
+      };
+      Collection.model_spec.merge({
+        4: {
+          a: 1
+        }
+      });
+      return assert.deepEqual(Query.model_specs.hash[4], {
+        a: 1,
+        _id: 4,
+        model_spec_id: 4,
+        rowid: 3,
+        created: true
+      });
+    });
+    it("catch update event", function() {
+      Model.model_spec.update = function(item, arg) {
+        var rowid;
+        rowid = arg.rowid;
+        item.rowid = rowid;
+        return item.updated = true;
+      };
+      Collection.model_spec.merge({
+        4: {
+          a: 2
+        }
+      });
+      return assert.deepEqual(Query.model_specs.hash[4], {
+        a: 2,
+        _id: 4,
+        model_spec_id: 4,
+        rowid: 3,
+        updated: true
+      });
+    });
+    return it("catch delete event", function() {
+      var target;
+      Model.model_spec["delete"] = function(old) {
+        return old.deleted = true;
+      };
+      target = Query.model_specs.hash[3];
+      Collection.model_spec.del({
+        _id: 3
+      });
+      return assert.deepEqual(target, {
         _id: 3,
+        model_spec_id: 3,
         rowid: 2,
-        model_spec_id: 3
-      }
-    ]);
-    return assert(Model.model_spec.rowid = 3);
-  });
-
-  it("catch create event", function() {
-    Model.model_spec.create = function(item) {
-      item.rowid = this.rowid;
-      return item.created = true;
-    };
-    Collection.model_spec.merge({
-      4: {
-        a: 1
-      }
-    });
-    return assert.deepEqual(Query.model_specs.hash[4], {
-      a: 1,
-      _id: 4,
-      model_spec_id: 4,
-      rowid: 3,
-      created: true
-    });
-  });
-
-  it("catch update event", function() {
-    Model.model_spec.update = function(item, arg) {
-      var rowid;
-      rowid = arg.rowid;
-      item.rowid = rowid;
-      return item.updated = true;
-    };
-    Collection.model_spec.merge({
-      4: {
-        a: 2
-      }
-    });
-    return assert.deepEqual(Query.model_specs.hash[4], {
-      a: 2,
-      _id: 4,
-      model_spec_id: 4,
-      rowid: 3,
-      updated: true
-    });
-  });
-
-  it("catch delete event", function() {
-    var target;
-    Model.model_spec["delete"] = function(old) {
-      return old.deleted = true;
-    };
-    target = Query.model_specs.hash[3];
-    Collection.model_spec.del({
-      _id: 3
-    });
-    return assert.deepEqual(target, {
-      _id: 3,
-      model_spec_id: 3,
-      rowid: 2,
-      deleted: true
+        deleted: true
+      });
     });
   });
 
@@ -505,7 +504,7 @@
 
   ref = require("../memory-record.js"), Collection = ref.Collection, Query = ref.Query, Rule = ref.Rule;
 
-  describe("Collection", function() {
+  describe("Query deploy", function() {
     return it("set", function() {
       new Rule("test").schema(function() {
         return this.order("data.order[2]");
@@ -601,15 +600,13 @@
 }).call(this);
 
 (function() {
-  var Collection, Query, Rule, _, ref,
-    extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
-    hasProp = {}.hasOwnProperty;
+  var Collection, Query, Rule, _, ref;
 
   ref = require("../memory-record.js"), Collection = ref.Collection, Query = ref.Query, Rule = ref.Rule;
 
   _ = require("lodash");
 
-  describe("Collection", function() {
+  describe("relation", function() {
     it("set", function() {
       new Rule("base").schema(function() {
         this.order("_id");
@@ -618,50 +615,45 @@
         });
         this.tree();
         this.has_many("tests");
-        return this.model = (function(superClass) {
-          extend(model, superClass);
-
-          function model() {
-            return model.__super__.constructor.apply(this, arguments);
-          }
-
-          return model;
-
-        })(this.model);
+        return this.has_many("tags", {
+          by: "ids"
+        });
       });
       new Rule("test").schema(function() {
-        this.belongs_to("base", {
+        return this.belongs_to("base", {
           dependent: true
         });
-        return this.model = (function(superClass) {
-          extend(model, superClass);
-
-          function model() {
-            return model.__super__.constructor.apply(this, arguments);
-          }
-
-          return model;
-
-        })(this.model);
+      });
+      new Rule("tag").schema(function() {});
+      Collection.tag.set({
+        a: {},
+        b: {},
+        c: {},
+        d: {}
       });
       Collection.base.set([
         {
           _id: 100,
           base_id: 400,
-          base_ids: [200, 300]
+          base_ids: [200, 300],
+          tag_ids: ["a"]
         }, {
           _id: 200,
-          base_id: 100
+          base_id: 100,
+          tag_ids: ["b"]
         }, {
           _id: 300,
-          base_id: 100
+          base_id: 100,
+          tag_ids: ["c"]
         }, {
           _id: 400,
           base_id: 500,
-          base_ids: [100, 300]
+          base_ids: [100, 300],
+          tag_ids: ["a", "d"]
         }, {
           _id: 500,
-          base_ids: [400, 300]
+          base_ids: [400, 300],
+          tag_ids: ["b", "c", "d"]
         }
       ]);
       return Collection.test.set([
@@ -695,7 +687,8 @@
     });
     it("has base model by ids", function() {
       assert.deepEqual(Query.bases.list[0].base_ids, [200, 300]);
-      return assert.deepEqual(Query.bases.list[0].bases.ids, [200, 300]);
+      assert.deepEqual(Query.bases.list[0].bases.ids, [200, 300]);
+      return assert.deepEqual(Query.bases.list[0].tags.ids, ["a"]);
     });
     it("model graph", function() {
       assert.deepEqual(Query.bases.hash[500].path(0).ids, [500]);
@@ -724,7 +717,7 @@
 
   ref = require("../memory-record.js"), Collection = ref.Collection, Query = ref.Query, Rule = ref.Rule;
 
-  describe("Collection", function() {
+  describe("scope deploy", function() {
     return it("set", function() {
       new Rule("test").schema(function() {
         return this.scope(function(all) {
@@ -777,12 +770,12 @@
     });
   });
 
-  describe("Query", function() {
-    it("scope call", function() {
+  describe("scope", function() {
+    it("call", function() {
       assert.deepEqual(Query.tests.topA.ids, ["10", "news"]);
       return assert.deepEqual(Query.tests.in_key("A").ids, ["10", "20", "news"]);
     });
-    return it("scope call cached", function() {
+    return it("call cached", function() {
       return assert.deepEqual(Query.tests["in_key:[\"A\"]"].ids, ["10", "20", "news"]);
     });
   });
@@ -911,7 +904,7 @@
 
   ref = require("../memory-record.js"), Collection = ref.Collection, Query = ref.Query, Rule = ref.Rule;
 
-  describe("Collection", function() {
+  describe("sync", function() {
     return it("set", function() {
       new Rule("test").schema(function() {});
       Collection.test.set([

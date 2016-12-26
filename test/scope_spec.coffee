@@ -1,7 +1,7 @@
 { Collection, Query, Rule } = require("../memory-record.js")
 
 
-describe "Collection", ()->
+describe "scope deploy", ()->
   it "set", ->
     new Rule("test").schema ->
       @scope (all)->
@@ -37,11 +37,11 @@ describe "Collection", ()->
 
     assert.deepEqual Query.tests.ids, ["10", "20", "news", "newnews"]
 
-describe "Query", ()->
-  it "scope call", ->
+describe "scope", ()->
+  it "call", ->
     assert.deepEqual Query.tests.topA.ids, ["10", "news"]
     assert.deepEqual Query.tests.in_key("A").ids, ["10", "20", "news"]
 
-  it "scope call cached", ->
+  it "call cached", ->
     assert.deepEqual Query.tests["""in_key:["A"]"""].ids, ["10", "20", "news"]
 

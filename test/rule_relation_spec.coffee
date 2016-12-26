@@ -1,36 +1,48 @@
 { Collection, Query, Rule } = require("../memory-record.js")
 _ = require "lodash"
 
-describe "Collection", ()->
+describe "relation", ()->
   it "set", ->
     new Rule("base").schema ->
       @order "_id"
       @graph directed: true
       @tree()
       @has_many "tests"
-      class @model extends @model
+      @has_many "tags", by: "ids"
 
     new Rule("test").schema ->
       @belongs_to "base", dependent: true
-      class @model extends @model
+
+    new Rule("tag").schema ->
+
+    Collection.tag.set
+      a: {}
+      b: {}
+      c: {}
+      d: {}
 
     Collection.base.set [
       _id: 100
       base_id: 400
       base_ids: [ 200, 300]
+      tag_ids: ["a"]
     ,
       _id: 200
       base_id: 100
+      tag_ids: ["b"]
     ,
       _id: 300
       base_id: 100
+      tag_ids: ["c"]
     ,
       _id: 400
       base_id: 500
       base_ids: [ 100, 300]
+      tag_ids: ["a", "d"]
     ,
       _id: 500
       base_ids: [ 400, 300]
+      tag_ids: ["b", "c", "d"]
     ]
     Collection.test.set [
       _id: 10
@@ -52,7 +64,7 @@ describe "Collection", ()->
 
   it "belongs to base model", ->
     assert.deepEqual Query.tests.ids, [10, 20]
-    assert.deepEqual Query.tests.pluck("base_id"), [100, 100]
+    assert.deepEqual Query.tests.pluck("base_id"),  [100, 100]
     assert.deepEqual Query.tests.pluck("base._id"), [100, 100]
 
   it "has test model by foreign key", ->
@@ -60,8 +72,9 @@ describe "Collection", ()->
     assert.deepEqual Query.bases.list[0].tests.ids, [10, 20]
 
   it "has base model by ids", ->
-    assert.deepEqual Query.bases.list[0].base_ids,           [200, 300]
+    assert.deepEqual Query.bases.list[0].base_ids,  [200, 300]
     assert.deepEqual Query.bases.list[0].bases.ids, [200, 300]
+    assert.deepEqual Query.bases.list[0].tags.ids, ["a"]
 
   it "model graph", ->
     assert.deepEqual Query.bases.hash[500].path(0).ids,                     [500]

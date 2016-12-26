@@ -1,7 +1,7 @@
 { Collection, Query, Rule } = require("../memory-record.js")
 
 
-describe "Collection", ()->
+describe "Query deploy", ()->
   it "set", ->
     new Rule("test").schema ->
       @order "data.order[2]"
