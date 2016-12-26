@@ -1,17 +1,17 @@
 _ = require "lodash"
 
-rename = {}
+_rename = {}
+rename = (base)->
+  id =   "#{base}_id"
+  ids =  "#{base}_ids"
+  list = "#{base}s"
+  _rename[list] = _rename[base] = { id, ids, list, base }
+
 Mem = module.exports
 
 class Mem.Rule
   constructor: (base)->
-    @name = rename[base] =
-      id:    "#{base}_id"
-      ids:   "#{base}_ids"
-      list:  "#{base}s"
-      base:  base
-    rename[@name.list] = @name
-
+    @name = rename base
     @depend_on base
 
     @finder = new Mem.Base.Finder "_id"
@@ -98,7 +98,7 @@ class Mem.Rule
       all[key] [@[qk]], n
 
   belongs_to: (to, option = {})->
-    name = rename[to]
+    name = rename to
     { key = name.id, target = name.list, dependent } = option
     @relation_to_one to, target, key
 
@@ -109,7 +109,7 @@ class Mem.Rule
 
   has_many: (to, option = {})->
     { key, target = to } = option
-    name = rename[to]
+    name = rename to
     switch option.by
       when "ids"
         ik = key ? name.ids

@@ -1,6 +1,6 @@
 /**
  memory-record - activerecord like in-memory data manager
- @version v0.2.13
+ @version v0.2.14
  @link https://github.com/7korobi/memory-record
  @license 
 **/
@@ -755,26 +755,33 @@
 }).call(this);
 
 (function() {
-  var Mem, _, rename,
+  var Mem, _, _rename, rename,
     extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
     hasProp = {}.hasOwnProperty,
     slice = [].slice;
 
   _ = require("lodash");
 
-  rename = {};
+  _rename = {};
+
+  rename = function(base) {
+    var id, ids, list;
+    id = base + "_id";
+    ids = base + "_ids";
+    list = base + "s";
+    return _rename[list] = _rename[base] = {
+      id: id,
+      ids: ids,
+      list: list,
+      base: base
+    };
+  };
 
   Mem = module.exports;
 
   Mem.Rule = (function() {
     function Rule(base) {
-      this.name = rename[base] = {
-        id: base + "_id",
-        ids: base + "_ids",
-        list: base + "s",
-        base: base
-      };
-      rename[this.name.list] = this.name;
+      this.name = rename(base);
       this.depend_on(base);
       this.finder = new Mem.Base.Finder("_id");
       this.model = Mem.Base.Model;
@@ -945,7 +952,7 @@
       if (option == null) {
         option = {};
       }
-      name = rename[to];
+      name = rename(to);
       key = (ref = option.key) != null ? ref : name.id, target = (ref1 = option.target) != null ? ref1 : name.list, dependent = option.dependent;
       this.relation_to_one(to, target, key);
       if (dependent) {
@@ -962,7 +969,7 @@
         option = {};
       }
       key = option.key, target = (ref = option.target) != null ? ref : to;
-      name = rename[to];
+      name = rename(to);
       switch (option.by) {
         case "ids":
           ik = key != null ? key : name.ids;
