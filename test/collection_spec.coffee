@@ -24,6 +24,9 @@ describe "Query", ()->
     assert.deepEqual Query.collection_specs.ids, [20]
 
   it "data append methods", ->
+    dml.set [
+      { _id: 20 }
+    ]
     dml.merge [
       { _id: 40 }
       { _id: 50 }
@@ -55,6 +58,12 @@ describe "Query", ()->
     assert.deepEqual Query.collection_specs.ids, [10, 20, 100, 110, 120]
 
   it "remove methods", ->
+    dml.set
+      10:  {}
+      20:  {}
+      100: {}
+      110: {}
+      120: {}
     dml.reject [
       { _id: 100 }
       { _id: 110 }
@@ -66,6 +75,9 @@ describe "Query", ()->
     assert.deepEqual Query.collection_specs.ids, [10, 20]
 
   it "remove without data", ->
+    dml.set
+      10:  {}
+      20:  {}
     dml.remove
       _id: 999
     assert.deepEqual Query.collection_specs.ids, [10, 20]

@@ -15,8 +15,8 @@ f_item = (cb)->
   (item, parent)->
     cb.call @, [item], parent
 
-f_composite = ->
-  @rule.finder.rehash()
+f_clear = ->
+  @rule.finder.clear_cache()
 
 Mem = module.exports
 class Mem.Base.Collection
@@ -29,12 +29,12 @@ class Mem.Base.Collection
   add:    f_item f_merge
   append: f_item f_merge
   create: f_item f_merge
-  del:    f_item f_merge
+  del:    f_item f_remove
   remove: f_item f_remove
 
-  clear_cache: f_composite
-  refresh:     f_composite
-  rehash:      f_composite
+  clear_cache: f_clear
+  refresh:     f_clear
+  rehash:      f_clear
 
   constructor: (@rule)->
     @validates = []

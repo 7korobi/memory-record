@@ -36,7 +36,7 @@ class Mem.Base.Finder
       else
         @query.all[key] = query_call
 
-  rehash: ->
+  clear_cache: ->
     delete @query.all._reduce
     delete @query.all._list
     delete @query.all._hash
@@ -46,7 +46,7 @@ class Mem.Base.Finder
 
   calculate: (query)->
     @list query, @query.all._memory
-    if query._list.length && @model.map_reduce?
+    if query._list.length && @model.do_map_reduce
       @reduce query
       if query._distinct?
         @group query
@@ -138,10 +138,10 @@ class Mem.Base.Finder
     each from, (item)=>
       old = _memory[item._id]
       if old?
-        @model.delete old
+        @model.delete old.item
         delete _memory[item._id]
       return
-    @rehash()
+    @clear_cache()
 
   reset: (from, parent)->
     { _memory } = @query.all
@@ -151,21 +151,22 @@ class Mem.Base.Finder
     for key, old of _memory
       item = news[key]
       if item?
-        @model.update item, old
+        @model.update item, old.item
       else
         @model.delete old
-    @rehash()
+    @clear_cache()
 
   merge: (from, parent)->
     { _memory } = @query.all
+
+    @model.do_map_reduce = false
     each from, (item)=>
+      item.__proto__ = @model.prototype
       for key, val of parent
         item[key] = val
-      item.__proto__ = @model.prototype
       @model.call item, @model
       unless item._id
         throw new Error "detect bad data: #{JSON.stringify item}"
-      @model.rowid++
 
       every = true
       for chk in @validates when ! chk item
@@ -174,17 +175,17 @@ class Mem.Base.Finder
 
       if every
         o = { item, emits: [] }
+        @model.map_reduce item, (keys..., cmd)=>
+          o.emits.push [keys, cmd]
+          @model.do_map_reduce = true
+
         old = _memory[item._id]
         if old?
-          @model.update item, old
+          @model.update item, old.item
         else
           @model.create item
+          @model.rowid++
         _memory[item._id] = o
-
-        if @model.map_reduce?
-          emit = (keys..., cmd)=>
-            o.emits.push [keys, cmd]
-          @model.map_reduce item, emit
       return
-    @rehash()
+    @clear_cache()
 

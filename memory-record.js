@@ -20,7 +20,7 @@
 }).call(this);
 
 (function() {
-  var Mem, OBJ, f_composite, f_item, f_merge, f_remove, f_reset;
+  var Mem, OBJ, f_clear, f_item, f_merge, f_remove, f_reset;
 
   OBJ = function() {
     return new Object(null);
@@ -44,8 +44,8 @@
     };
   };
 
-  f_composite = function() {
-    return this.rule.finder.rehash();
+  f_clear = function() {
+    return this.rule.finder.clear_cache();
   };
 
   Mem = module.exports;
@@ -65,15 +65,15 @@
 
     Collection.prototype.create = f_item(f_merge);
 
-    Collection.prototype.del = f_item(f_merge);
+    Collection.prototype.del = f_item(f_remove);
 
     Collection.prototype.remove = f_item(f_remove);
 
-    Collection.prototype.clear_cache = f_composite;
+    Collection.prototype.clear_cache = f_clear;
 
-    Collection.prototype.refresh = f_composite;
+    Collection.prototype.refresh = f_clear;
 
-    Collection.prototype.rehash = f_composite;
+    Collection.prototype.rehash = f_clear;
 
     function Collection(rule) {
       this.rule = rule;
@@ -155,7 +155,7 @@
       }
     };
 
-    Finder.prototype.rehash = function() {
+    Finder.prototype.clear_cache = function() {
       delete this.query.all._reduce;
       delete this.query.all._list;
       delete this.query.all._hash;
@@ -166,7 +166,7 @@
 
     Finder.prototype.calculate = function(query) {
       this.list(query, this.query.all._memory);
-      if (query._list.length && (this.model.map_reduce != null)) {
+      if (query._list.length && this.model.do_map_reduce) {
         this.reduce(query);
         if (query._distinct != null) {
           this.group(query);
@@ -315,12 +315,12 @@
           var old;
           old = _memory[item._id];
           if (old != null) {
-            _this.model["delete"](old);
+            _this.model["delete"](old.item);
             delete _memory[item._id];
           }
         };
       })(this));
-      return this.rehash();
+      return this.clear_cache();
     };
 
     Finder.prototype.reset = function(from, parent) {
@@ -332,30 +332,30 @@
         old = _memory[key];
         item = news[key];
         if (item != null) {
-          this.model.update(item, old);
+          this.model.update(item, old.item);
         } else {
           this.model["delete"](old);
         }
       }
-      return this.rehash();
+      return this.clear_cache();
     };
 
     Finder.prototype.merge = function(from, parent) {
       var _memory;
       _memory = this.query.all._memory;
+      this.model.do_map_reduce = false;
       each(from, (function(_this) {
         return function(item) {
-          var chk, emit, every, i, key, len, o, old, ref, val;
+          var chk, every, i, key, len, o, old, ref, val;
+          item.__proto__ = _this.model.prototype;
           for (key in parent) {
             val = parent[key];
             item[key] = val;
           }
-          item.__proto__ = _this.model.prototype;
           _this.model.call(item, _this.model);
           if (!item._id) {
             throw new Error("detect bad data: " + (JSON.stringify(item)));
           }
-          _this.model.rowid++;
           every = true;
           ref = _this.validates;
           for (i = 0, len = ref.length; i < len; i++) {
@@ -371,25 +371,24 @@
               item: item,
               emits: []
             };
+            _this.model.map_reduce(item, function() {
+              var cmd, j, keys;
+              keys = 2 <= arguments.length ? slice.call(arguments, 0, j = arguments.length - 1) : (j = 0, []), cmd = arguments[j++];
+              o.emits.push([keys, cmd]);
+              return _this.model.do_map_reduce = true;
+            });
             old = _memory[item._id];
             if (old != null) {
-              _this.model.update(item, old);
+              _this.model.update(item, old.item);
             } else {
               _this.model.create(item);
+              _this.model.rowid++;
             }
             _memory[item._id] = o;
-            if (_this.model.map_reduce != null) {
-              emit = function() {
-                var cmd, j, keys;
-                keys = 2 <= arguments.length ? slice.call(arguments, 0, j = arguments.length - 1) : (j = 0, []), cmd = arguments[j++];
-                return o.emits.push([keys, cmd]);
-              };
-              _this.model.map_reduce(item, emit);
-            }
           }
         };
       })(this));
-      return this.rehash();
+      return this.clear_cache();
     };
 
     return Finder;
@@ -411,6 +410,8 @@
     Model.create = function(item) {};
 
     Model["delete"] = function(old) {};
+
+    Model.map_reduce = function(item, emit) {};
 
     function Model(m) {
       if (!this._id) {
@@ -979,7 +980,7 @@
         option = {};
       }
       this.relation_tree("nodes", this.name.id, "_id");
-      return this.belongs_to(this.name.base);
+      return this.belongs_to(this.name.base, option);
     };
 
     Rule.prototype.graph = function(option) {

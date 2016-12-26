@@ -76,6 +76,11 @@
       return assert.deepEqual(Query.collection_specs.ids, [20]);
     });
     it("data append methods", function() {
+      dml.set([
+        {
+          _id: 20
+        }
+      ]);
       dml.merge([
         {
           _id: 40
@@ -111,6 +116,13 @@
       return assert.deepEqual(Query.collection_specs.ids, [10, 20, 100, 110, 120]);
     });
     it("remove methods", function() {
+      dml.set({
+        10: {},
+        20: {},
+        100: {},
+        110: {},
+        120: {}
+      });
       dml.reject([
         {
           _id: 100
@@ -125,6 +137,10 @@
       return assert.deepEqual(Query.collection_specs.ids, [10, 20]);
     });
     it("remove without data", function() {
+      dml.set({
+        10: {},
+        20: {}
+      });
       dml.remove({
         _id: 999
       });
@@ -379,24 +395,18 @@
 }).call(this);
 
 (function() {
-  var Collection, Query, Rule, ref,
+  var Collection, Model, Query, Rule, ref,
     extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
     hasProp = {}.hasOwnProperty;
 
-  ref = require("../memory-record.js"), Collection = ref.Collection, Query = ref.Query, Rule = ref.Rule;
+  ref = require("../memory-record.js"), Collection = ref.Collection, Query = ref.Query, Rule = ref.Rule, Model = ref.Model;
 
   new Rule("model_spec").schema(function() {
     return this.model = (function(superClass) {
       extend(model, superClass);
 
-      model.update = function(item, old) {};
-
-      model.create = function(item) {};
-
-      model["delete"] = function(old) {};
-
-      function model(arg) {
-        this.rowid = arg.rowid;
+      function model() {
+        return model.__super__.constructor.apply(this, arguments);
       }
 
       return model;
@@ -404,25 +414,87 @@
     })(this.model);
   });
 
-  it("", function() {
+  it("rowid sequence", function() {
+    Model.model_spec.create = function(item) {
+      return item.rowid = this.rowid;
+    };
     Collection.model_spec.merge({
       3: {},
       2: {},
       1: {}
     });
-    return assert.deepEqual(Query.model_specs.hash, {
-      1: {
+    assert.deepEqual(Query.model_specs.list, [
+      {
         _id: 1,
-        rowid: 0
-      },
-      2: {
+        rowid: 0,
+        model_spec_id: 1
+      }, {
         _id: 2,
-        rowid: 1
-      },
-      3: {
+        rowid: 1,
+        model_spec_id: 2
+      }, {
         _id: 3,
-        rowid: 2
+        rowid: 2,
+        model_spec_id: 3
       }
+    ]);
+    return assert(Model.model_spec.rowid = 3);
+  });
+
+  it("catch create event", function() {
+    Model.model_spec.create = function(item) {
+      item.rowid = this.rowid;
+      return item.created = true;
+    };
+    Collection.model_spec.merge({
+      4: {
+        a: 1
+      }
+    });
+    return assert.deepEqual(Query.model_specs.hash[4], {
+      a: 1,
+      _id: 4,
+      model_spec_id: 4,
+      rowid: 3,
+      created: true
+    });
+  });
+
+  it("catch update event", function() {
+    Model.model_spec.update = function(item, arg) {
+      var rowid;
+      rowid = arg.rowid;
+      item.rowid = rowid;
+      return item.updated = true;
+    };
+    Collection.model_spec.merge({
+      4: {
+        a: 2
+      }
+    });
+    return assert.deepEqual(Query.model_specs.hash[4], {
+      a: 2,
+      _id: 4,
+      model_spec_id: 4,
+      rowid: 3,
+      updated: true
+    });
+  });
+
+  it("catch delete event", function() {
+    var target;
+    Model.model_spec["delete"] = function(old) {
+      return old.deleted = true;
+    };
+    target = Query.model_specs.hash[3];
+    Collection.model_spec.del({
+      _id: 3
+    });
+    return assert.deepEqual(target, {
+      _id: 3,
+      model_spec_id: 3,
+      rowid: 2,
+      deleted: true
     });
   });
 

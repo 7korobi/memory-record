@@ -5,6 +5,7 @@ class Mem.Base.Model
   @update: (item, old)->
   @create: (item)->
   @delete: (old)->
+  @map_reduce: (item, emit)->
 
   constructor: (m)->
     @_id = @[m.id] unless @_id

@@ -121,7 +121,7 @@ class Mem.Rule
 
   tree: (option={})->
     @relation_tree "nodes", @name.id, "_id"
-    @belongs_to @name.base
+    @belongs_to @name.base, option
 
   graph: (option={})->
     { directed, cost } = option
