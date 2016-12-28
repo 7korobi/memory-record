@@ -96,9 +96,8 @@ describe "Query", ()->
     Collection.test.clear_cache()
     assert Query.tests["key"]
     assert Query.tests["id_by_key"]
-    assert Query.tests["id_by_key"]
-    assert Query.tests["key:[\"A\"]"]
-    assert Query.tests["key:[\"C\"]"]
-    assert Query.tests["id_by_key:[\"A\"]"]
-    assert Query.tests["id_by_key:[\"C\"]"]
+    assert Query.tests["""key:["A"]"""]
+    assert Query.tests["""key:["C"]"""]
+    assert Query.tests["""id_by_key:["A"]"""]
+    assert Query.tests["""id_by_key:["C"]"""]
 

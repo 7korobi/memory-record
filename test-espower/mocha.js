@@ -618,7 +618,6 @@
       Collection.test.clear_cache();
       assert(Query.tests["key"]);
       assert(Query.tests["id_by_key"]);
-      assert(Query.tests["id_by_key"]);
       assert(Query.tests["key:[\"A\"]"]);
       assert(Query.tests["key:[\"C\"]"]);
       assert(Query.tests["id_by_key:[\"A\"]"]);
@@ -747,72 +746,7 @@
 }).call(this);
 
 (function() {
-  var Collection, Query, Rule, ref;
 
-  ref = require("../memory-record.js"), Collection = ref.Collection, Query = ref.Query, Rule = ref.Rule;
-
-  describe("scope deploy", function() {
-    return it("set", function() {
-      new Rule("test").schema(function() {
-        return this.scope(function(all) {
-          return {
-            topA: all.where({
-              key: /^A/
-            }),
-            in_key: function(key) {
-              return all["in"]({
-                key: key
-              });
-            }
-          };
-        });
-      });
-      Collection.test.set([
-        {
-          _id: 10,
-          key: "A",
-          list: ["A"],
-          data: {
-            msg: "Hello World!"
-          }
-        }, {
-          _id: 20,
-          key: "BA",
-          list: ["A", "B"],
-          data: {
-            msg: "Bye World!"
-          }
-        }
-      ]);
-      Collection.test.create({
-        _id: "news",
-        key: "A",
-        list: ["A"],
-        data: {
-          msg: "Merge World!"
-        }
-      });
-      Collection.test.create({
-        _id: "newnews",
-        key: "C",
-        list: ["C"],
-        data: {
-          msg: "Merge New World!"
-        }
-      });
-      return assert.deepEqual(Query.tests.ids, ["10", "20", "news", "newnews"]);
-    });
-  });
-
-  describe("scope", function() {
-    it("call", function() {
-      assert.deepEqual(Query.tests.topA.ids, ["10", "news"]);
-      return assert.deepEqual(Query.tests.in_key("A").ids, ["10", "20", "news"]);
-    });
-    return it("call cached", function() {
-      return assert.deepEqual(Query.tests["in_key:[\"A\"]"].ids, ["10", "20", "news"]);
-    });
-  });
 
 }).call(this);
 
