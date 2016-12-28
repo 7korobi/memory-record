@@ -289,6 +289,9 @@
   }
 
   describe("map_reduce", function() {
+    it("distinct", function() {
+      return assert.deepEqual(Query.map_reduce_specs.distinct("case.typed", "min_is").ids, [1, 2, 3, 4, 5]);
+    });
     it("set", function() {
       return assert(Query.map_reduce_specs.list.length === 100);
     });
@@ -507,7 +510,19 @@
   describe("Query deploy", function() {
     return it("set", function() {
       new Rule("test").schema(function() {
-        return this.order("data.order[2]");
+        this.order("data.order[2]");
+        return this.scope(function(all) {
+          return {
+            key: function(key) {
+              return all.where(function(o) {
+                return o.key === key;
+              });
+            },
+            id_by_key: function(key) {
+              return all.key(key).pluck("_id");
+            }
+          };
+        });
       });
       Collection.test.set([
         {
@@ -591,9 +606,23 @@
       assert.deepEqual(Query.tests.sort(["_id"], ["asc"]).pluck("_id"), [20, 100, "newnews", "news"]);
       return assert.deepEqual(Query.tests.sort(["_id"], ["desc"]).pluck("_id"), [100, 20, "news", "newnews"]);
     });
-    return it("shuffle", function() {
+    it("shuffle", function() {
       assert.deepEqual(Query.tests.shuffle().pluck("_id").sort(), [100, 20, "newnews", "news"]);
       return assert.notDeepEqual(Query.tests.shuffle().pluck("_id"), [100, 20, "newnews", "news"]);
+    });
+    return it("use scope", function() {
+      assert.deepEqual(Query.tests.key("A").pluck("_id"), ["news", 100]);
+      assert.deepEqual(Query.tests.key("C").pluck("_id"), ["newnews"]);
+      assert.deepEqual(Query.tests.id_by_key("A"), ["news", 100]);
+      assert.deepEqual(Query.tests.id_by_key("C"), ["newnews"]);
+      Collection.test.clear_cache();
+      assert(Query.tests["key"]);
+      assert(Query.tests["id_by_key"]);
+      assert(Query.tests["id_by_key"]);
+      assert(Query.tests["key:[\"A\"]"]);
+      assert(Query.tests["key:[\"C\"]"]);
+      assert(Query.tests["id_by_key:[\"A\"]"]);
+      return assert(Query.tests["id_by_key:[\"C\"]"]);
     });
   });
 
@@ -702,11 +731,16 @@
       assert.deepEqual(Query.bases["path:[[500,400,300,100],1]"].ids, [100, 200, 300, 400, 500]);
       return assert.deepEqual(Query.bases["path:[[500,400,300,100,200],0]"].ids, [100, 200, 300, 400, 500]);
     });
-    return it("model tree", function() {
+    it("model tree", function() {
       assert.deepEqual(Query.bases.hash[500].nodes(0).ids, [500]);
       assert.deepEqual(Query.bases.hash[500].nodes(1).ids, [400, 500]);
       assert.deepEqual(Query.bases.hash[500].nodes(2).ids, [100, 400, 500]);
       return assert.deepEqual(Query.bases.hash[500].nodes(3).ids, [100, 200, 300, 400, 500]);
+    });
+    return it("complex case", function() {
+      return assert.deepEqual(Query.bases.hash[500].nodes(1)["in"]({
+        tag_ids: "b"
+      }).ids, [500]);
     });
   });
 

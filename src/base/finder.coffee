@@ -19,8 +19,7 @@ each = (from, process)->
 Mem = module.exports
 class Mem.Base.Finder
   constructor: (@model, @sortBy, @orderBy)->
-    all = new Mem.Base.Query @, [], @sortBy, @orderBy
-    all._memory = OBJ()
+    all = Mem.Base.Query.build @
     @scope = { all }
     @query = { all }
     @validates = []
@@ -44,12 +43,17 @@ class Mem.Base.Finder
       all: @query.all
     return
 
+  save: (query)->
+    for item in query.list
+      for chk in @validates when ! chk item
+        @model.save item
+
   calculate: (query)->
     @list query, @query.all._memory
     if query._list.length && @model.do_map_reduce
       @reduce query
-      if query._distinct?
-        @group query
+      if query._group?
+        @group query, query._group
     @sort query
     return
 
@@ -105,10 +109,19 @@ class Mem.Base.Finder
 
 
   group: (query)->
-    { reduce, target } = query._distinct
+    { reduce, target } = query._group
+    reduce_path = _.property reduce
+    target_path = _.property target
+
+    deploy = (id, o)->
+      query._memory[id] = o
+      query._hash[id] = o.item
+    query._memory = OBJ()
+    query._hash = OBJ()
     query._list =
-      for id, o of query._reduce[reduce]
-        o[target]
+      for id, reduced of reduce_path query._reduce
+        o = target_path reduced
+        deploy o._id, o
 
   list: (query, all)->
     if query._memory == all
@@ -120,10 +133,9 @@ class Mem.Base.Finder
         query._memory[id] = o
         query._hash[id] = o.item
 
-    ids = query._ids ? Object.keys all
     query._hash = OBJ()
     query._list =
-      for id in ids
+      for id in query._all_ids ? Object.keys all
         o = all[id]
         every = true
         for chk in query.filters when ! chk o.item

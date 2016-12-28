@@ -23,6 +23,9 @@ for n in [1..100]
     type: "ABCDE"[n % 5]
 
 describe "map_reduce", ()->
+  it "distinct", ->
+    assert.deepEqual Query.map_reduce_specs.distinct("case.typed", "min_is").ids, [1..5]
+
   it "set", ->
     assert Query.map_reduce_specs.list.length == 100
 

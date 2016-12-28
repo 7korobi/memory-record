@@ -103,12 +103,11 @@ class Mem.Rule
   belongs_to: (to, option = {})->
     name = rename to
     { key = name.id, target = name.list, dependent } = option
-    @relation_to_one to, target, key
+    @relation_to_one name.base, target, key
 
     if dependent
       @depend_on to
-      @finder.validate (o)->
-        o[to]?
+      @finder.validate (o)-> o[to]?
 
   has_many: (to, option = {})->
     name = rename to.replace /s$/, ""

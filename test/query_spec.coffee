@@ -5,6 +5,10 @@ describe "Query deploy", ()->
   it "set", ->
     new Rule("test").schema ->
       @order "data.order[2]"
+      @scope (all)->
+        key:       (key)-> all.where((o)-> o.key == key)
+        id_by_key: (key)-> all.key(key).pluck("_id")
+
     Collection.test.set [
       _id: 100
       key: "A"
@@ -81,5 +85,20 @@ describe "Query", ()->
 
   it "shuffle", ->
     assert.deepEqual Query.tests.shuffle().pluck("_id").sort(), [100, 20, "newnews", "news"]
-    assert.notDeepEqual     Query.tests.shuffle().pluck("_id"), [100, 20, "newnews", "news"]
+    assert.notDeepEqual Query.tests.shuffle().pluck("_id"),     [100, 20, "newnews", "news"]
     # fail per 4 * 3 * 2 * 1   if  shuffled order same as sorted.
+
+  it "use scope", ->
+    assert.deepEqual Query.tests.key("A").pluck("_id"), ["news", 100]
+    assert.deepEqual Query.tests.key("C").pluck("_id"), ["newnews"]
+    assert.deepEqual Query.tests.id_by_key("A"), ["news", 100]
+    assert.deepEqual Query.tests.id_by_key("C"), ["newnews"]
+    Collection.test.clear_cache()
+    assert Query.tests["key"]
+    assert Query.tests["id_by_key"]
+    assert Query.tests["id_by_key"]
+    assert Query.tests["key:[\"A\"]"]
+    assert Query.tests["key:[\"C\"]"]
+    assert Query.tests["id_by_key:[\"A\"]"]
+    assert Query.tests["id_by_key:[\"C\"]"]
+

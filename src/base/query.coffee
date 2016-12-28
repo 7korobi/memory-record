@@ -13,7 +13,13 @@ set_for = (list)->
 
 Mem = module.exports
 class Mem.Base.Query
-  constructor: (@finder, @filters, @sortBy, @orderBy)->
+  @build: (finder)->
+    { sortBy, orderBy } = finder
+    q = new Mem.Base.Query finder, null, null, [], sortBy, orderBy
+    q._memory = OBJ()
+    q
+
+  constructor: (@finder, @_all_ids, @_group, @filters, @sortBy, @orderBy)->
 
   _query_parser: (req, cb)->
     return @ unless req
@@ -32,10 +38,10 @@ class Mem.Base.Query
       else
         console.log { req }
         throw Error 'unimplemented'
-    new Query @finder, filters, @sortBy, @orderBy
+    new Query @finder, @_all_ids, @_group, filters, @sortBy, @orderBy
 
   in: (req)->
-    q = @_query_parser req, (target, req, path)->
+    @_query_parser req, (target, req, path)=>
       switch req?.constructor
         when Array
           set = set_for req
@@ -55,17 +61,16 @@ class Mem.Base.Query
         else
           console.log { target, req, path }
           throw Error 'unimplemented'
-    q
 
   where: (req)->
-    ids = null
+    all_ids = null
     q = @_query_parser req, (target, req, path)->
       switch req?.constructor
         when Function
           req
         when Array
           if "_id" == target
-            ids = req
+            all_ids = req
             null
           else
             set = set_for req
@@ -74,14 +79,14 @@ class Mem.Base.Query
           (o)-> req.test path o
         when null, Boolean, String, Number
           if "_id" == target
-            ids = [req]
+            all_ids = [req]
             null
           else
             (o)-> req == path o
         else
           console.log { target, req, path }
           throw Error 'unimplemented'
-    q._ids = ids if ids?
+    q._all_ids = all_ids if all_ids
     q
 
   search: (text)->
@@ -96,16 +101,15 @@ class Mem.Base.Query
     @where (o)-> (! o.search_words) || regexp.test o.search_words
 
   distinct: (reduce, target)->
-    query = new Query @finder, @filters, @sortBy, @orderBy
-    query._distinct = {reduce, target}
-    query
+    group = {reduce, target}
+    new Query @finder, @_all_ids, group, @filters, @sortBy, @orderBy
 
   sort: (sortBy, orderBy)->
     return @ if _.isEqual [sortBy, orderBy], [@sortBy, @orderBy]
-    new Query @finder, @filters, sortBy, orderBy
+    new Query @finder, @_all_ids, @_group, @filters, sortBy, orderBy
 
   shuffle: ->
-    new Query @finder, @filters, Math.random
+    new Query @finder, @_all_ids, @_group, @filters, Math.random
 
   clear: ->
     delete @_reduce
@@ -135,7 +139,7 @@ class Mem.Base.Query
         @list.map (o)->
           _.at o, keys
 
-  Object.defineProperties @.prototype,
+  Object.defineProperties @prototype,
     reduce:
       get: ->
         @finder.calculate(@) unless @_reduce?

@@ -93,3 +93,6 @@ describe "relation", ()->
     assert.deepEqual Query.bases.hash[500].nodes(1).ids,                [400, 500]
     assert.deepEqual Query.bases.hash[500].nodes(2).ids, [100,           400, 500]
     assert.deepEqual Query.bases.hash[500].nodes(3).ids, [100, 200, 300, 400, 500]
+
+  it "complex case", ->
+    assert.deepEqual Query.bases.hash[500].nodes(1).in(tag_ids: "b").ids, [500]

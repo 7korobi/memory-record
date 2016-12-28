@@ -125,8 +125,7 @@
       this.model = model;
       this.sortBy = sortBy1;
       this.orderBy = orderBy1;
-      all = new Mem.Base.Query(this, [], this.sortBy, this.orderBy);
-      all._memory = OBJ();
+      all = Mem.Base.Query.build(this);
       this.scope = {
         all: all
       };
@@ -164,12 +163,34 @@
       };
     };
 
+    Finder.prototype.save = function(query) {
+      var chk, i, item, len, ref, results;
+      ref = query.list;
+      results = [];
+      for (i = 0, len = ref.length; i < len; i++) {
+        item = ref[i];
+        results.push((function() {
+          var j, len1, ref1, results1;
+          ref1 = this.validates;
+          results1 = [];
+          for (j = 0, len1 = ref1.length; j < len1; j++) {
+            chk = ref1[j];
+            if (!chk(item)) {
+              results1.push(this.model.save(item));
+            }
+          }
+          return results1;
+        }).call(this));
+      }
+      return results;
+    };
+
     Finder.prototype.calculate = function(query) {
       this.list(query, this.query.all._memory);
       if (query._list.length && this.model.do_map_reduce) {
         this.reduce(query);
-        if (query._distinct != null) {
-          this.group(query);
+        if (query._group != null) {
+          this.group(query, query._group);
         }
       }
       this.sort(query);
@@ -253,22 +274,31 @@
     };
 
     Finder.prototype.group = function(query) {
-      var id, o, reduce, ref, target;
-      ref = query._distinct, reduce = ref.reduce, target = ref.target;
+      var deploy, id, o, reduce, reduce_path, reduced, ref, target, target_path;
+      ref = query._group, reduce = ref.reduce, target = ref.target;
+      reduce_path = _.property(reduce);
+      target_path = _.property(target);
+      deploy = function(id, o) {
+        query._memory[id] = o;
+        return query._hash[id] = o.item;
+      };
+      query._memory = OBJ();
+      query._hash = OBJ();
       return query._list = (function() {
         var ref1, results;
-        ref1 = query._reduce[reduce];
+        ref1 = reduce_path(query._reduce);
         results = [];
         for (id in ref1) {
-          o = ref1[id];
-          results.push(o[target]);
+          reduced = ref1[id];
+          o = target_path(reduced);
+          results.push(deploy(o._id, o));
         }
         return results;
       })();
     };
 
     Finder.prototype.list = function(query, all) {
-      var chk, deploy, every, id, ids, o, ref;
+      var chk, deploy, every, id, o;
       if (query._memory === all) {
         deploy = function(id, o) {
           return query._hash[id] = o.item;
@@ -280,18 +310,18 @@
           return query._hash[id] = o.item;
         };
       }
-      ids = (ref = query._ids) != null ? ref : Object.keys(all);
       query._hash = OBJ();
       return query._list = (function() {
-        var i, j, len, len1, ref1, results;
+        var i, j, len, len1, ref, ref1, ref2, results;
+        ref1 = (ref = query._all_ids) != null ? ref : Object.keys(all);
         results = [];
-        for (i = 0, len = ids.length; i < len; i++) {
-          id = ids[i];
+        for (i = 0, len = ref1.length; i < len; i++) {
+          id = ref1[i];
           o = all[id];
           every = true;
-          ref1 = query.filters;
-          for (j = 0, len1 = ref1.length; j < len1; j++) {
-            chk = ref1[j];
+          ref2 = query.filters;
+          for (j = 0, len1 = ref2.length; j < len1; j++) {
+            chk = ref2[j];
             if (!(!chk(o.item))) {
               continue;
             }
@@ -405,11 +435,17 @@
   Mem.Base.Model = (function() {
     Model.rowid = 0;
 
+    Model.save = function(item) {};
+
     Model.update = function(item, old) {};
 
     Model.create = function(item) {};
 
     Model["delete"] = function(old) {};
+
+    Model.validate = function(item) {
+      return true;
+    };
 
     Model.map_reduce = function(item, emit) {};
 
@@ -451,8 +487,18 @@
   Mem = module.exports;
 
   Mem.Base.Query = (function() {
-    function Query(finder, filters1, sortBy1, orderBy1) {
-      this.finder = finder;
+    Query.build = function(finder) {
+      var orderBy, q, sortBy;
+      sortBy = finder.sortBy, orderBy = finder.orderBy;
+      q = new Mem.Base.Query(finder, null, null, [], sortBy, orderBy);
+      q._memory = OBJ();
+      return q;
+    };
+
+    function Query(finder1, _all_ids, _group, filters1, sortBy1, orderBy1) {
+      this.finder = finder1;
+      this._all_ids = _all_ids;
+      this._group = _group;
       this.filters = filters1;
       this.sortBy = sortBy1;
       this.orderBy = orderBy1;
@@ -491,62 +537,62 @@
           });
           throw Error('unimplemented');
       }
-      return new Query(this.finder, filters, this.sortBy, this.orderBy);
+      return new Query(this.finder, this._all_ids, this._group, filters, this.sortBy, this.orderBy);
     };
 
     Query.prototype["in"] = function(req) {
-      var q;
-      q = this._query_parser(req, function(target, req, path) {
-        var set;
-        switch (req != null ? req.constructor : void 0) {
-          case Array:
-            set = set_for(req);
-            return function(o) {
-              var i, key, len, ref;
-              ref = path(o);
-              for (i = 0, len = ref.length; i < len; i++) {
-                key = ref[i];
-                if (set[key]) {
-                  return true;
+      return this._query_parser(req, (function(_this) {
+        return function(target, req, path) {
+          var set;
+          switch (req != null ? req.constructor : void 0) {
+            case Array:
+              set = set_for(req);
+              return function(o) {
+                var i, key, len, ref;
+                ref = path(o);
+                for (i = 0, len = ref.length; i < len; i++) {
+                  key = ref[i];
+                  if (set[key]) {
+                    return true;
+                  }
                 }
-              }
-              return false;
-            };
-          case RegExp:
-            return function(o) {
-              var i, len, ref, val;
-              ref = path(o);
-              for (i = 0, len = ref.length; i < len; i++) {
-                val = ref[i];
-                if (req.test(val)) {
-                  return true;
+                return false;
+              };
+            case RegExp:
+              return function(o) {
+                var i, len, ref, val;
+                ref = path(o);
+                for (i = 0, len = ref.length; i < len; i++) {
+                  val = ref[i];
+                  if (req.test(val)) {
+                    return true;
+                  }
                 }
-              }
-              return false;
-            };
-          case null:
-          case Boolean:
-          case String:
-          case Number:
-            return function(o) {
-              set = set_for(path(o));
-              return set[req];
-            };
-          default:
-            console.log({
-              target: target,
-              req: req,
-              path: path
-            });
-            throw Error('unimplemented');
-        }
-      });
-      return q;
+                return false;
+              };
+            case null:
+            case Boolean:
+            case String:
+            case Number:
+              return function(o) {
+                set = set_for(path(o));
+                return set[req];
+              };
+            default:
+              console.log({
+                target: target,
+                req: req,
+                path: path
+              });
+              throw Error('unimplemented');
+          }
+        };
+      })(this));
     };
 
     Query.prototype.where = function(req) {
-      var ids, q;
-      ids = null;
+      var all_ids, q;
+      all_ids = null;
       q = this._query_parser(req, function(target, req, path) {
         var set;
         switch (req != null ? req.constructor : void 0) {
@@ -554,7 +600,7 @@
             return req;
           case Array:
             if ("_id" === target) {
-              ids = req;
+              all_ids = req;
               return null;
             } else {
               set = set_for(req);
@@ -572,7 +618,7 @@
           case String:
           case Number:
             if ("_id" === target) {
-              ids = [req];
+              all_ids = [req];
               return null;
             } else {
               return function(o) {
@@ -589,8 +635,8 @@
             throw Error('unimplemented');
         }
       });
-      if (ids != null) {
-        q._ids = ids;
+      if (all_ids) {
+        q._all_ids = all_ids;
       }
       return q;
     };
@@ -624,24 +670,23 @@
     };
 
     Query.prototype.distinct = function(reduce, target) {
-      var query;
-      query = new Query(this.finder, this.filters, this.sortBy, this.orderBy);
-      query._distinct = {
+      var group;
+      group = {
         reduce: reduce,
         target: target
       };
-      return query;
+      return new Query(this.finder, this._all_ids, group, this.filters, this.sortBy, this.orderBy);
     };
 
     Query.prototype.sort = function(sortBy, orderBy) {
       if (_.isEqual([sortBy, orderBy], [this.sortBy, this.orderBy])) {
         return this;
       }
-      return new Query(this.finder, this.filters, sortBy, orderBy);
+      return new Query(this.finder, this._all_ids, this._group, this.filters, sortBy, orderBy);
     };
 
     Query.prototype.shuffle = function() {
-      return new Query(this.finder, this.filters, Math.random);
+      return new Query(this.finder, this._all_ids, this._group, this.filters, Math.random);
     };
 
     Query.prototype.clear = function() {
@@ -958,7 +1003,7 @@
       }
       name = rename(to);
       key = (ref = option.key) != null ? ref : name.id, target = (ref1 = option.target) != null ? ref1 : name.list, dependent = option.dependent;
-      this.relation_to_one(to, target, key);
+      this.relation_to_one(name.base, target, key);
       if (dependent) {
         this.depend_on(to);
         return this.finder.validate(function(o) {

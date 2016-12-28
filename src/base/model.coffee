@@ -2,9 +2,11 @@
 Mem = module.exports
 class Mem.Base.Model
   @rowid = 0
+  @save: (item)->
   @update: (item, old)->
   @create: (item)->
   @delete: (old)->
+  @validate: (item)-> true
   @map_reduce: (item, emit)->
 
   constructor: (m)->
