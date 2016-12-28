@@ -1,6 +1,6 @@
 /**
  memory-record - activerecord like in-memory data manager
- @version v0.2.20
+ @version v0.2.21
  @link https://github.com/7korobi/memory-record
  @license 
 **/
@@ -572,7 +572,8 @@
           case String:
           case Number:
             return add(function(o) {
-              return -1 < path(o).indexOf(req);
+              var ref;
+              return -1 < ((ref = path(o)) != null ? ref.indexOf(req) : void 0);
             });
           default:
             console.log({

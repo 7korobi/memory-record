@@ -57,7 +57,7 @@ class Mem.Base.Query
             false
         when null, Boolean, String, Number
           add (o)->
-            -1 < path(o).indexOf req
+            -1 < path(o)?.indexOf req
         else
           console.log { target, req, path }
           throw Error 'unimplemented'
