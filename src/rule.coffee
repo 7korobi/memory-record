@@ -138,6 +138,9 @@ class Mem.Rule
     query._memory = @finder.query.all._memory
     Mem.Query[@name.list] = @finder.query.all = query
 
+  sort: (sortBy)->
+    @order sortBy
+
   order: (sortBy, orderBy)->
     query = @finder.query.all.sort sortBy, orderBy
     query._memory = @finder.query.all._memory

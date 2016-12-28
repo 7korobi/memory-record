@@ -120,11 +120,9 @@
   Mem = module.exports;
 
   Mem.Base.Finder = (function() {
-    function Finder(model, sortBy1, orderBy1) {
+    function Finder(model) {
       var all;
       this.model = model;
-      this.sortBy = sortBy1;
-      this.orderBy = orderBy1;
       all = Mem.Base.Query.build(this);
       this.scope = {
         all: all
@@ -266,8 +264,8 @@
     };
 
     Finder.prototype.sort = function(query) {
-      var orderBy, sortBy;
-      sortBy = query.sortBy, orderBy = query.orderBy;
+      var orderBy, ref, sortBy;
+      ref = query._sort, sortBy = ref[0], orderBy = ref[1];
       if (sortBy != null) {
         return query._list = orderBy != null ? _.orderBy(query._list, sortBy, orderBy) : _.sortBy(query._list, sortBy);
       }
@@ -319,7 +317,7 @@
           id = ref1[i];
           o = all[id];
           every = true;
-          ref2 = query.filters;
+          ref2 = query._filters;
           for (j = 0, len1 = ref2.length; j < len1; j++) {
             chk = ref2[j];
             if (!(!chk(o.item))) {
@@ -465,7 +463,7 @@
 }).call(this);
 
 (function() {
-  var Mem, OBJ, _, set_for,
+  var Mem, OBJ, _, query_parser, set_for,
     slice = [].slice;
 
   _ = require("lodash");
@@ -484,146 +482,142 @@
     return set;
   };
 
+  query_parser = function(base, req, cb) {
+    var key, q, val;
+    if (!req) {
+      return base;
+    }
+    q = new Mem.Base.Query(base);
+    q._filters = base._filters.concat();
+    switch (req != null ? req.constructor : void 0) {
+      case Object:
+        for (key in req) {
+          val = req[key];
+          cb(q, key, val, _.property(key));
+        }
+        break;
+      case Function:
+      case Array:
+      case String:
+        cb(q, null, req, function(o) {
+          return o;
+        });
+        break;
+      default:
+        console.log({
+          req: req
+        });
+        throw Error('unimplemented');
+    }
+    return q;
+  };
+
   Mem = module.exports;
 
   Mem.Base.Query = (function() {
-    Query.build = function(finder) {
-      var orderBy, q, sortBy;
-      sortBy = finder.sortBy, orderBy = finder.orderBy;
-      q = new Mem.Base.Query(finder, null, null, [], sortBy, orderBy);
+    Query.build = function(_finder) {
+      var _all_ids, _filters, _group, _sort, q;
+      _all_ids = _group = null;
+      _filters = [];
+      _sort = [];
+      q = new Mem.Base.Query({
+        _finder: _finder,
+        _all_ids: _all_ids,
+        _group: _group,
+        _filters: _filters,
+        _sort: _sort
+      });
       q._memory = OBJ();
       return q;
     };
 
-    function Query(finder1, _all_ids, _group, filters1, sortBy1, orderBy1) {
-      this.finder = finder1;
-      this._all_ids = _all_ids;
-      this._group = _group;
-      this.filters = filters1;
-      this.sortBy = sortBy1;
-      this.orderBy = orderBy1;
+    function Query(arg) {
+      this._finder = arg._finder, this._all_ids = arg._all_ids, this._group = arg._group, this._filters = arg._filters, this._sort = arg._sort;
     }
 
-    Query.prototype._query_parser = function(req, cb) {
-      var doit, filters, key, val;
-      if (!req) {
-        return this;
-      }
-      filters = this.filters.concat();
-      doit = function(target, req, path) {
-        var f;
-        f = cb(target, req, path);
-        if (f) {
-          return filters.push(f);
-        }
-      };
-      switch (req != null ? req.constructor : void 0) {
-        case Object:
-          for (key in req) {
-            val = req[key];
-            doit(key, val, _.property(key));
-          }
-          break;
-        case Function:
-        case Array:
-        case String:
-          doit(null, req, function(o) {
-            return o;
-          });
-          break;
-        default:
-          console.log({
-            req: req
-          });
-          throw Error('unimplemented');
-      }
-      return new Query(this.finder, this._all_ids, this._group, filters, this.sortBy, this.orderBy);
-    };
-
     Query.prototype["in"] = function(req) {
-      return this._query_parser(req, (function(_this) {
-        return function(target, req, path) {
-          var set;
-          switch (req != null ? req.constructor : void 0) {
-            case Array:
-              set = set_for(req);
-              return function(o) {
-                var i, key, len, ref;
-                ref = path(o);
-                for (i = 0, len = ref.length; i < len; i++) {
-                  key = ref[i];
-                  if (set[key]) {
-                    return true;
-                  }
-                }
-                return false;
-              };
-            case RegExp:
-              return function(o) {
-                var i, len, ref, val;
-                ref = path(o);
-                for (i = 0, len = ref.length; i < len; i++) {
-                  val = ref[i];
-                  if (req.test(val)) {
-                    return true;
-                  }
-                }
-                return false;
-              };
-            case null:
-            case Boolean:
-            case String:
-            case Number:
-              return function(o) {
-                set = set_for(path(o));
-                return set[req];
-              };
-            default:
-              console.log({
-                target: target,
-                req: req,
-                path: path
-              });
-              throw Error('unimplemented');
-          }
+      return query_parser(this, req, function(q, target, req, path) {
+        var add, set;
+        add = function(f) {
+          return q._filters.push(f);
         };
-      })(this));
+        switch (req != null ? req.constructor : void 0) {
+          case Array:
+            set = set_for(req);
+            return add(function(o) {
+              var i, key, len, ref;
+              ref = path(o);
+              for (i = 0, len = ref.length; i < len; i++) {
+                key = ref[i];
+                if (set[key]) {
+                  return true;
+                }
+              }
+              return false;
+            });
+          case RegExp:
+            return add(function(o) {
+              var i, len, ref, val;
+              ref = path(o);
+              for (i = 0, len = ref.length; i < len; i++) {
+                val = ref[i];
+                if (req.test(val)) {
+                  return true;
+                }
+              }
+              return false;
+            });
+          case null:
+          case Boolean:
+          case String:
+          case Number:
+            return add(function(o) {
+              return -1 < path(o).indexOf(req);
+            });
+          default:
+            console.log({
+              target: target,
+              req: req,
+              path: path
+            });
+            throw Error('unimplemented');
+        }
+      });
     };
 
     Query.prototype.where = function(req) {
-      var all_ids, q;
-      all_ids = null;
-      q = this._query_parser(req, function(target, req, path) {
-        var set;
+      return query_parser(this, req, function(q, target, req, path) {
+        var add, set;
+        add = function(f) {
+          return q._filters.push(f);
+        };
         switch (req != null ? req.constructor : void 0) {
           case Function:
-            return req;
+            return add(req);
           case Array:
             if ("_id" === target) {
-              all_ids = req;
-              return null;
+              return q._all_ids = req;
             } else {
               set = set_for(req);
-              return function(o) {
+              return add(function(o) {
                 return set[path(o)];
-              };
+              });
             }
             break;
           case RegExp:
-            return function(o) {
+            return add(function(o) {
               return req.test(path(o));
-            };
+            });
           case null:
           case Boolean:
           case String:
           case Number:
             if ("_id" === target) {
-              all_ids = [req];
-              return null;
+              return q._all_ids = [req];
             } else {
-              return function(o) {
+              return add(function(o) {
                 return req === path(o);
-              };
+              });
             }
             break;
           default:
@@ -635,10 +629,6 @@
             throw Error('unimplemented');
         }
       });
-      if (all_ids) {
-        q._all_ids = all_ids;
-      }
-      return q;
     };
 
     Query.prototype.search = function(text) {
@@ -670,23 +660,35 @@
     };
 
     Query.prototype.distinct = function(reduce, target) {
-      var group;
+      var group, q;
       group = {
         reduce: reduce,
         target: target
       };
-      return new Query(this.finder, this._all_ids, group, this.filters, this.sortBy, this.orderBy);
-    };
-
-    Query.prototype.sort = function(sortBy, orderBy) {
-      if (_.isEqual([sortBy, orderBy], [this.sortBy, this.orderBy])) {
+      if (_.isEqual(group, this._group)) {
         return this;
       }
-      return new Query(this.finder, this._all_ids, this._group, this.filters, sortBy, orderBy);
+      q = new Query(this);
+      q._group = group;
+      return q;
+    };
+
+    Query.prototype.sort = function() {
+      var _sort, q;
+      _sort = 1 <= arguments.length ? slice.call(arguments, 0) : [];
+      if (_.isEqual(_sort, this._sort)) {
+        return this;
+      }
+      q = new Query(this);
+      q._sort = _sort;
+      return q;
     };
 
     Query.prototype.shuffle = function() {
-      return new Query(this.finder, this._all_ids, this._group, this.filters, Math.random);
+      var q;
+      q = new Query(this);
+      q._sort = [Math.random];
+      return q;
     };
 
     Query.prototype.clear = function() {
@@ -697,7 +699,7 @@
     };
 
     Query.prototype.save = function() {
-      return this.finder.save(this);
+      return this._finder.save(this);
     };
 
     Query.prototype.find = function(id) {
@@ -741,7 +743,7 @@
       reduce: {
         get: function() {
           if (this._reduce == null) {
-            this.finder.calculate(this);
+            this._finder.calculate(this);
           }
           return this._reduce;
         }
@@ -749,7 +751,7 @@
       list: {
         get: function() {
           if (this._list == null) {
-            this.finder.calculate(this);
+            this._finder.calculate(this);
           }
           return this._list;
         }
@@ -757,7 +759,7 @@
       hash: {
         get: function() {
           if (this._hash == null) {
-            this.finder.calculate(this);
+            this._finder.calculate(this);
           }
           return this._hash;
         }
@@ -765,7 +767,7 @@
       memory: {
         get: function() {
           if (this._memory == null) {
-            this.finder.calculate(this);
+            this._finder.calculate(this);
           }
           return this._memory;
         }
@@ -1058,6 +1060,10 @@
       query = this.finder.query.all.shuffle();
       query._memory = this.finder.query.all._memory;
       return Mem.Query[this.name.list] = this.finder.query.all = query;
+    };
+
+    Rule.prototype.sort = function(sortBy) {
+      return this.order(sortBy);
     };
 
     Rule.prototype.order = function(sortBy, orderBy) {

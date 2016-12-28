@@ -9,85 +9,81 @@ set_for = (list)->
     set[key] = true
   set
 
+query_parser = (base, req, cb)->
+  return base unless req
+
+  q = new Mem.Base.Query base
+  q._filters = base._filters.concat()
+
+  switch req?.constructor
+    when Object
+      for key, val of req
+        cb q, key, val, _.property key
+
+    when Function, Array, String
+      cb q, null, req, (o)-> o
+    else
+      console.log { req }
+      throw Error 'unimplemented'
+  q
 
 
 Mem = module.exports
 class Mem.Base.Query
-  @build: (finder)->
-    { sortBy, orderBy } = finder
-    q = new Mem.Base.Query finder, null, null, [], sortBy, orderBy
+  @build: (_finder)->
+    _all_ids = _group = null
+    _filters = []
+    _sort = []
+    q = new Mem.Base.Query { _finder, _all_ids, _group, _filters, _sort }
     q._memory = OBJ()
     q
 
-  constructor: (@finder, @_all_ids, @_group, @filters, @sortBy, @orderBy)->
-
-  _query_parser: (req, cb)->
-    return @ unless req
-    filters = @filters.concat()
-    doit = (target, req, path)->
-      f = cb target, req, path
-      filters.push f if f
-
-    switch req?.constructor
-      when Object
-        for key, val of req
-          doit key, val, _.property key
-
-      when Function, Array, String
-        doit null, req, (o)-> o
-      else
-        console.log { req }
-        throw Error 'unimplemented'
-    new Query @finder, @_all_ids, @_group, filters, @sortBy, @orderBy
+  constructor: ({ @_finder, @_all_ids, @_group, @_filters, @_sort })->
 
   in: (req)->
-    @_query_parser req, (target, req, path)=>
+    query_parser @, req, (q, target, req, path)->
+      add = (f)-> q._filters.push f
       switch req?.constructor
         when Array
           set = set_for req
-          (o)->
+          add (o)->
             for key in path o
               return true if set[key]
             false
         when RegExp
-          (o)->
+          add (o)->
             for val in path o
               return true if req.test val
             false
         when null, Boolean, String, Number
-          (o)->
-            set = set_for path o
-            set[req]
+          add (o)->
+            -1 < path(o).indexOf req
         else
           console.log { target, req, path }
           throw Error 'unimplemented'
 
   where: (req)->
-    all_ids = null
-    q = @_query_parser req, (target, req, path)->
+    query_parser @, req, (q, target, req, path)->
+      add = (f)-> q._filters.push f
       switch req?.constructor
         when Function
-          req
+          add req
         when Array
           if "_id" == target
-            all_ids = req
-            null
+            q._all_ids = req
           else
             set = set_for req
-            (o)-> set[ path o ]
+            add (o)-> set[ path o ]
         when RegExp
-          (o)-> req.test path o
+          add (o)-> req.test path o
         when null, Boolean, String, Number
           if "_id" == target
-            all_ids = [req]
-            null
+            q._all_ids = [req]
           else
-            (o)-> req == path o
+            add (o)-> req == path o
         else
           console.log { target, req, path }
           throw Error 'unimplemented'
-    q._all_ids = all_ids if all_ids
-    q
 
   search: (text)->
     return @ unless text
@@ -102,14 +98,21 @@ class Mem.Base.Query
 
   distinct: (reduce, target)->
     group = {reduce, target}
-    new Query @finder, @_all_ids, group, @filters, @sortBy, @orderBy
+    return @ if _.isEqual group, @_group
+    q = new Query @
+    q._group = group
+    q
 
-  sort: (sortBy, orderBy)->
-    return @ if _.isEqual [sortBy, orderBy], [@sortBy, @orderBy]
-    new Query @finder, @_all_ids, @_group, @filters, sortBy, orderBy
+  sort: (_sort...)->
+    return @ if _.isEqual _sort, @_sort
+    q = new Query @
+    q._sort = _sort
+    q
 
   shuffle: ->
-    new Query @finder, @_all_ids, @_group, @filters, Math.random
+    q = new Query @
+    q._sort = [Math.random]
+    q
 
   clear: ->
     delete @_reduce
@@ -118,7 +121,7 @@ class Mem.Base.Query
     delete @_memory
 
   save: ->
-    @finder.save(@)
+    @_finder.save(@)
 
   find: (id)->
     @hash[id]
@@ -142,22 +145,22 @@ class Mem.Base.Query
   Object.defineProperties @prototype,
     reduce:
       get: ->
-        @finder.calculate(@) unless @_reduce?
+        @_finder.calculate(@) unless @_reduce?
         @_reduce
 
     list:
       get: ->
-        @finder.calculate(@) unless @_list?
+        @_finder.calculate(@) unless @_list?
         @_list
 
     hash:
       get: ->
-        @finder.calculate(@) unless @_hash?
+        @_finder.calculate(@) unless @_hash?
         @_hash
 
     memory:
       get: ->
-        @finder.calculate(@) unless @_memory?
+        @_finder.calculate(@) unless @_memory?
         @_memory
 
     ids:

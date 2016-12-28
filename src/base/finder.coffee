@@ -18,7 +18,7 @@ each = (from, process)->
 
 Mem = module.exports
 class Mem.Base.Finder
-  constructor: (@model, @sortBy, @orderBy)->
+  constructor: (@model)->
     all = Mem.Base.Query.build @
     @scope = { all }
     @query = { all }
@@ -99,7 +99,7 @@ class Mem.Base.Finder
     query._reduce = base
 
   sort: (query)->
-    { sortBy, orderBy } = query
+    [sortBy, orderBy] = query._sort
     if sortBy?
       query._list =
         if orderBy?
@@ -138,7 +138,7 @@ class Mem.Base.Finder
       for id in query._all_ids ? Object.keys all
         o = all[id]
         every = true
-        for chk in query.filters when ! chk o.item
+        for chk in query._filters when ! chk o.item
           every = false
           break
         continue unless every
