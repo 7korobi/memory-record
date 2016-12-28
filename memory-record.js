@@ -1,6 +1,6 @@
 /**
  memory-record - activerecord like in-memory data manager
- @version v0.2.16
+ @version v0.2.19
  @link https://github.com/7korobi/memory-record
  @license 
 **/
@@ -505,7 +505,7 @@
     }
 
     Query.prototype._query_parser = function(req, cb) {
-      var doit, filters, target;
+      var doit, filters, key, val;
       if (!req) {
         return this;
       }
@@ -519,9 +519,9 @@
       };
       switch (req != null ? req.constructor : void 0) {
         case Object:
-          for (target in req) {
-            req = req[target];
-            doit(target, req, _.property(target));
+          for (key in req) {
+            val = req[key];
+            doit(key, val, _.property(key));
           }
           break;
         case Function:

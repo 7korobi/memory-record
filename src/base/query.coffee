@@ -30,8 +30,8 @@ class Mem.Base.Query
 
     switch req?.constructor
       when Object
-        for target, req of req
-          doit target, req, _.property target
+        for key, val of req
+          doit key, val, _.property key
 
       when Function, Array, String
         doit null, req, (o)-> o
