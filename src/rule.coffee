@@ -8,7 +8,7 @@ rename = (base)->
   id =   "#{base}_id"
   ids =  "#{base}_ids"
   list = "#{base}s"
-  _rename[list] = _rename[base] = { id, ids, list, base }
+  _rename[base] = { id, ids, list, base }
 
 Mem = module.exports
 
@@ -52,6 +52,18 @@ class Mem.Rule
     @finder.scope = cb @finder.query.all
     for key, query_call of @finder.scope
       @finder.use_cache key, query_call
+
+  default_scope: (scope)->
+    old = @finder.query.all
+    Mem.Query[@name.list] = @finder.query.all = all = scope old
+    all._memory = old._memory
+
+  shuffle: ->
+    @default_scope (all)-> all.shuffle()
+  order: (sortBy, orderBy)->
+    @default_scope (all)-> all.sort sortBy, orderBy
+  sort: (sortBy)->
+    @default_scope (all)-> all.sort sortBy
 
   relation_to_one: (key, target, ik)->
     @inits.push =>
@@ -132,22 +144,3 @@ class Mem.Rule
     @relation_graph "path", ik, "_id"
     unless directed
       true # todo
-
-  shuffle: ->
-    query = @finder.query.all.shuffle()
-    query._memory = @finder.query.all._memory
-    Mem.Query[@name.list] = @finder.query.all = query
-
-  sort: (sortBy)->
-    @order sortBy
-
-  order: (sortBy, orderBy)->
-    query = @finder.query.all.sort sortBy, orderBy
-    query._memory = @finder.query.all._memory
-    Mem.Query[@name.list] = @finder.query.all = query
-
-  protect: (keys...)->
-    @protect = (o, old)->
-      for key in keys
-        o[key] = old[key]
-

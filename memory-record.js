@@ -1,6 +1,6 @@
 /**
  memory-record - activerecord like in-memory data manager
- @version v0.2.19
+ @version v0.2.20
  @link https://github.com/7korobi/memory-record
  @license 
 **/
@@ -804,8 +804,7 @@
 (function() {
   var Mem, _, _rename, rename,
     extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
-    hasProp = {}.hasOwnProperty,
-    slice = [].slice;
+    hasProp = {}.hasOwnProperty;
 
   _ = require("lodash");
 
@@ -820,7 +819,7 @@
     id = base + "_id";
     ids = base + "_ids";
     list = base + "s";
-    return _rename[list] = _rename[base] = {
+    return _rename[base] = {
       id: id,
       ids: ids,
       list: list,
@@ -897,6 +896,31 @@
         results.push(this.finder.use_cache(key, query_call));
       }
       return results;
+    };
+
+    Rule.prototype.default_scope = function(scope) {
+      var all, old;
+      old = this.finder.query.all;
+      Mem.Query[this.name.list] = this.finder.query.all = all = scope(old);
+      return all._memory = old._memory;
+    };
+
+    Rule.prototype.shuffle = function() {
+      return this.default_scope(function(all) {
+        return all.shuffle();
+      });
+    };
+
+    Rule.prototype.order = function(sortBy, orderBy) {
+      return this.default_scope(function(all) {
+        return all.sort(sortBy, orderBy);
+      });
+    };
+
+    Rule.prototype.sort = function(sortBy) {
+      return this.default_scope(function(all) {
+        return all.sort(sortBy);
+      });
     };
 
     Rule.prototype.relation_to_one = function(key, target, ik) {
@@ -1053,38 +1077,6 @@
       if (!directed) {
         return true;
       }
-    };
-
-    Rule.prototype.shuffle = function() {
-      var query;
-      query = this.finder.query.all.shuffle();
-      query._memory = this.finder.query.all._memory;
-      return Mem.Query[this.name.list] = this.finder.query.all = query;
-    };
-
-    Rule.prototype.sort = function(sortBy) {
-      return this.order(sortBy);
-    };
-
-    Rule.prototype.order = function(sortBy, orderBy) {
-      var query;
-      query = this.finder.query.all.sort(sortBy, orderBy);
-      query._memory = this.finder.query.all._memory;
-      return Mem.Query[this.name.list] = this.finder.query.all = query;
-    };
-
-    Rule.prototype.protect = function() {
-      var keys;
-      keys = 1 <= arguments.length ? slice.call(arguments, 0) : [];
-      return this.protect = function(o, old) {
-        var i, key, len, results;
-        results = [];
-        for (i = 0, len = keys.length; i < len; i++) {
-          key = keys[i];
-          results.push(o[key] = old[key]);
-        }
-        return results;
-      };
     };
 
     return Rule;
