@@ -28,6 +28,13 @@ class Mem.Base.Finder
     @all = Mem.Base.Query.build @
     @scope = { @all }
     @validates = []
+    @property =
+      first:
+        enumerable: false
+        get: -> @[0]
+      last:
+        enumerable: false
+        get: -> @[@length - 1]
 
   validate: (cb)->
     @validates.push cb
@@ -58,6 +65,7 @@ class Mem.Base.Finder
       if query._group?
         @group query, query._group
     @sort query
+    Object.defineProperties query._list, @property
     return
 
   reduce: (query)->

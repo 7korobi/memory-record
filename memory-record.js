@@ -138,6 +138,20 @@
         all: this.all
       };
       this.validates = [];
+      this.property = {
+        first: {
+          enumerable: false,
+          get: function() {
+            return this[0];
+          }
+        },
+        last: {
+          enumerable: false,
+          get: function() {
+            return this[this.length - 1];
+          }
+        }
+      };
     }
 
     Finder.prototype.validate = function(cb) {
@@ -196,6 +210,7 @@
         }
       }
       this.sort(query);
+      Object.defineProperties(query._list, this.property);
     };
 
     Finder.prototype.reduce = function(query) {
@@ -467,56 +482,58 @@
   };
 
   query_parser = function(base, req, cb) {
-    var key, q, val;
     if (!req) {
       return base;
     }
-    q = new Mem.Base.Query(base);
-    q._filters = base._filters.concat();
-    switch (req != null ? req.constructor : void 0) {
-      case Object:
-        for (key in req) {
-          val = req[key];
-          cb(q, key, val, _.property(key));
-        }
-        break;
-      case Function:
-      case Array:
-      case String:
-        cb(q, null, req, function(o) {
-          return o;
-        });
-        break;
-      default:
-        console.log({
-          req: req
-        });
-        throw Error('unimplemented');
-    }
-    return q;
+    return new Mem.Base.Query(base, function() {
+      var key, results, val;
+      this._filters = base._filters.concat();
+      switch (req != null ? req.constructor : void 0) {
+        case Object:
+          results = [];
+          for (key in req) {
+            val = req[key];
+            results.push(cb(this, key, val, _.property(key)));
+          }
+          return results;
+          break;
+        case Function:
+        case Array:
+        case String:
+          return cb(this, null, req, function(o) {
+            return o;
+          });
+        default:
+          console.log({
+            req: req
+          });
+          throw Error('unimplemented');
+      }
+    });
   };
 
   Mem = module.exports;
 
   Mem.Base.Query = (function() {
     Query.build = function(_finder) {
-      var _all_ids, _filters, _group, _sort, q;
+      var _all_ids, _filters, _group, _sort;
       _all_ids = _group = null;
       _filters = [];
       _sort = [];
-      q = new Mem.Base.Query({
+      return new Mem.Base.Query({
         _finder: _finder,
         _all_ids: _all_ids,
         _group: _group,
         _filters: _filters,
         _sort: _sort
+      }, function() {
+        return this._memory = OBJ();
       });
-      q._memory = OBJ();
-      return q;
     };
 
-    function Query(arg) {
+    function Query(arg, tap) {
       this._finder = arg._finder, this._all_ids = arg._all_ids, this._group = arg._group, this._filters = arg._filters, this._sort = arg._sort;
+      tap.call(this);
     }
 
     Query.prototype["in"] = function(req) {
@@ -645,7 +662,7 @@
     };
 
     Query.prototype.distinct = function(reduce, target) {
-      var group, q;
+      var group;
       group = {
         reduce: reduce,
         target: target
@@ -653,27 +670,26 @@
       if (_.isEqual(group, this._group)) {
         return this;
       }
-      q = new Query(this);
-      q._group = group;
-      return q;
+      return new Query(this, function() {
+        return this._group = group;
+      });
     };
 
     Query.prototype.sort = function() {
-      var _sort, q;
-      _sort = 1 <= arguments.length ? slice.call(arguments, 0) : [];
-      if (_.isEqual(_sort, this._sort)) {
+      var sort;
+      sort = 1 <= arguments.length ? slice.call(arguments, 0) : [];
+      if (_.isEqual(sort, this._sort)) {
         return this;
       }
-      q = new Query(this);
-      q._sort = _sort;
-      return q;
+      return new Query(this, function() {
+        return this._sort = sort;
+      });
     };
 
     Query.prototype.shuffle = function() {
-      var q;
-      q = new Query(this);
-      q._sort = [Math.random];
-      return q;
+      return new Query(this, function() {
+        return this._sort = [Math.random];
+      });
     };
 
     Query.prototype.clear = function() {
@@ -771,22 +787,6 @@
 }).call(this);
 
 (function() {
-  Object.defineProperties(Array.prototype, {
-    first: {
-      get: function() {
-        return this[0];
-      }
-    },
-    last: {
-      get: function() {
-        return this[this.length - 1];
-      }
-    }
-  });
-
-}).call(this);
-
-(function() {
   var Mem, _, _rename, rename,
     extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
     hasProp = {}.hasOwnProperty;
@@ -821,7 +821,7 @@
       this.finder = new Mem.Base.Finder("_id");
       this.model = Mem.Base.Model;
       this.dml = new Mem.Base.Collection(this);
-      this._property = {};
+      this.property = {};
       if (cb) {
         this.schema(cb);
       }
@@ -844,7 +844,7 @@
       }
       this.model.id = this.name.id;
       this.model.list = this.name.list;
-      Object.defineProperties(this.model.prototype, this._property);
+      Object.defineProperties(this.model.prototype, this.property);
       if (this.model.validate) {
         this.finder.validates.unshift(this.model.validate);
       }
@@ -916,7 +916,7 @@
     };
 
     Rule.prototype.relation_to_one = function(key, target, ik) {
-      return this._property[key] = {
+      return this.property[key] = {
         enumerable: true,
         get: function() {
           return Mem.Query[target].find(this[ik]);
@@ -935,7 +935,7 @@
           obj
         ));
       });
-      return this._property[key] = {
+      return this.property[key] = {
         enumerable: true,
         get: function() {
           return all[key](this[ik]);
@@ -968,7 +968,7 @@
           ));
         }
       });
-      return this._property[key] = {
+      return this.property[key] = {
         enumerable: true,
         value: function(n) {
           var id;
@@ -1006,7 +1006,7 @@
           return q;
         }
       });
-      return this._property[key] = {
+      return this.property[key] = {
         enumerable: true,
         value: function(n) {
           return all[key]([this[qk]], n);

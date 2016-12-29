@@ -12,20 +12,18 @@ set_for = (list)->
 query_parser = (base, req, cb)->
   return base unless req
 
-  q = new Mem.Base.Query base
-  q._filters = base._filters.concat()
+  new Mem.Base.Query base, ->
+    @_filters = base._filters.concat()
+    switch req?.constructor
+      when Object
+        for key, val of req
+          cb @, key, val, _.property key
 
-  switch req?.constructor
-    when Object
-      for key, val of req
-        cb q, key, val, _.property key
-
-    when Function, Array, String
-      cb q, null, req, (o)-> o
-    else
-      console.log { req }
-      throw Error 'unimplemented'
-  q
+      when Function, Array, String
+        cb @, null, req, (o)-> o
+      else
+        console.log { req }
+        throw Error 'unimplemented'
 
 
 Mem = module.exports
@@ -34,11 +32,11 @@ class Mem.Base.Query
     _all_ids = _group = null
     _filters = []
     _sort = []
-    q = new Mem.Base.Query { _finder, _all_ids, _group, _filters, _sort }
-    q._memory = OBJ()
-    q
+    new Mem.Base.Query { _finder, _all_ids, _group, _filters, _sort }, ->
+      @_memory = OBJ()
 
-  constructor: ({ @_finder, @_all_ids, @_group, @_filters, @_sort })->
+  constructor: ({ @_finder, @_all_ids, @_group, @_filters, @_sort }, tap)->
+    tap.call @
 
   in: (req)->
     query_parser @, req, (q, target, req, path)->
@@ -99,20 +97,14 @@ class Mem.Base.Query
   distinct: (reduce, target)->
     group = {reduce, target}
     return @ if _.isEqual group, @_group
-    q = new Query @
-    q._group = group
-    q
+    new Query @, -> @_group = group
 
-  sort: (_sort...)->
-    return @ if _.isEqual _sort, @_sort
-    q = new Query @
-    q._sort = _sort
-    q
+  sort: (sort...)->
+    return @ if _.isEqual sort, @_sort
+    new Query @, -> @_sort = sort
 
   shuffle: ->
-    q = new Query @
-    q._sort = [Math.random]
-    q
+    new Query @, -> @_sort = [Math.random]
 
   clear: ->
     delete @_reduce

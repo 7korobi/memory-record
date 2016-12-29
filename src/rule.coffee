@@ -21,7 +21,7 @@ class Mem.Rule
     @model = Mem.Base.Model
 
     @dml = new Mem.Base.Collection @
-    @_property = {}
+    @property = {}
     @schema cb if cb
     return
 
@@ -32,7 +32,7 @@ class Mem.Rule
       class @model extends @model
     @model.id   = @name.id
     @model.list = @name.list
-    Object.defineProperties @model.prototype, @_property
+    Object.defineProperties @model.prototype, @property
 
     @finder.validates.unshift @model.validate if @model.validate
     Mem.Model[@name.base] = @finder.model = @model
@@ -72,7 +72,7 @@ class Mem.Rule
     @default_scope (all)-> all.sort sortBy
 
   relation_to_one: (key, target, ik)->
-    @_property[key] =
+    @property[key] =
       enumerable: true
       get: ->
         Mem.Query[target].find(@[ik])
@@ -82,7 +82,7 @@ class Mem.Rule
     @finder.use_cache key, (id)->
       Mem.Query[target].where "#{qk}": id
 
-    @_property[key] =
+    @property[key] =
       enumerable: true
       get: ->
         all[key](@[ik])
@@ -98,7 +98,7 @@ class Mem.Rule
       else
         all.where "#{qk}": id
 
-    @_property[key] =
+    @property[key] =
       enumerable: true
       value: (n)->
         id = [@[qk]]
@@ -117,7 +117,7 @@ class Mem.Rule
       else
         q
 
-    @_property[key] =
+    @property[key] =
       enumerable: true
       value: (n)->
         all[key] [@[qk]], n
