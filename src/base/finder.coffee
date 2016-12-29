@@ -16,12 +16,17 @@ each = (from, process)->
       throw new Error "detect bad data: #{JSON.stringify from}"
   return
 
+validate = (item, chklist)->
+  for chk in chklist when ! chk item
+    return false
+  true
+
+
 Mem = module.exports
 class Mem.Base.Finder
   constructor: (@model)->
-    all = Mem.Base.Query.build @
-    @scope = { all }
-    @query = { all }
+    @all = Mem.Base.Query.build @
+    @scope = { @all }
     @validates = []
 
   validate: (cb)->
@@ -30,17 +35,15 @@ class Mem.Base.Finder
   use_cache: (key, query_call)->
     switch query_call?.constructor
       when Function
-        @query.all[key] = (args...)=>
-          @query.all["#{key}:#{JSON.stringify args}"] ?= query_call args...
+        @all[key] = (args...)=>
+          @all["#{key}:#{JSON.stringify args}"] ?= query_call args...
       else
-        @query.all[key] = query_call
+        @all[key] = query_call
 
   clear_cache: ->
-    delete @query.all._reduce
-    delete @query.all._list
-    delete @query.all._hash
-    @query =
-      all: @query.all
+    delete @all._reduce
+    delete @all._list
+    delete @all._hash
     return
 
   save: (query)->
@@ -49,7 +52,7 @@ class Mem.Base.Finder
         @model.save item
 
   calculate: (query)->
-    @list query, @query.all._memory
+    @list query, @all._memory
     if query._list.length && @model.do_map_reduce
       @reduce query
       if query._group?
@@ -137,16 +140,12 @@ class Mem.Base.Finder
     query._list =
       for id in query._all_ids ? Object.keys all
         o = all[id]
-        every = true
-        for chk in query._filters when ! chk o.item
-          every = false
-          break
-        continue unless every
+        continue unless validate o.item, query._filters
         deploy id, o
 
 
   remove: (from)->
-    { _memory } = @query.all
+    { _memory } = @all
     each from, (item)=>
       old = _memory[item._id]
       if old?
@@ -156,8 +155,8 @@ class Mem.Base.Finder
     @clear_cache()
 
   reset: (from, parent)->
-    { _memory } = @query.all
-    @query.all._memory = news = OBJ()
+    { _memory } = @all
+    @all._memory = news = OBJ()
     @merge from, parent
 
     for key, old of _memory
@@ -169,7 +168,7 @@ class Mem.Base.Finder
     @clear_cache()
 
   merge: (from, parent)->
-    { _memory } = @query.all
+    { _memory } = @all
 
     @model.do_map_reduce = false
     each from, (item)=>
@@ -180,12 +179,7 @@ class Mem.Base.Finder
       unless item._id
         throw new Error "detect bad data: #{JSON.stringify item}"
 
-      every = true
-      for chk in @validates when ! chk item
-        every = false
-        break
-
-      if every
+      if validate item, @validates
         o = { item, emits: [] }
         @model.map_reduce item, (keys..., cmd)=>
           o.emits.push [keys, cmd]

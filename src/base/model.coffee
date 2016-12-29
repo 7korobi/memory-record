@@ -7,6 +7,7 @@ class Mem.Base.Model
   @create: (item)->
   @delete: (old)->
   @validate: (item)-> true
+
   @map_reduce: (item, emit)->
 
   constructor: (m)->

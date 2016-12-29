@@ -21,23 +21,23 @@ class Mem.Rule
     @model = Mem.Base.Model
 
     @dml = new Mem.Base.Collection @
-    @inits = []
+    @_property = {}
     @schema cb if cb
     return
 
   schema: (cb)->
     cb.call @, @dml
-    @model.id   = @name.id
-    @model.list = @name.list
+
     if @model == Mem.Base.Model
       class @model extends @model
+    @model.id   = @name.id
+    @model.list = @name.list
+    Object.defineProperties @model.prototype, @_property
 
-    for init in @inits
-      init()
-
+    @finder.validates.unshift @model.validate if @model.validate
     Mem.Model[@name.base] = @finder.model = @model
     Mem.Collection[@name.base] = @dml
-    Mem.Query[@name.list] = @finder.query.all
+    Mem.Query[@name.list] = @finder.all
     @
 
   composite: ->
@@ -50,15 +50,19 @@ class Mem.Rule
     Mem.Composite[parent].push ->
       Mem.Collection[parent].rule.finder.rehash()
 
-  scope: (cb)->
-    @finder.scope = cb @finder.query.all
+  scope_deploy: ->
     for key, query_call of @finder.scope
       @finder.use_cache key, query_call
 
+  scope: (cb)->
+    @finder.scope = cb @finder.all
+    @scope_deploy()
+
   default_scope: (scope)->
-    old = @finder.query.all
-    Mem.Query[@name.list] = @finder.query.all = all = scope old
+    old = @finder.all
+    Mem.Query[@name.list] = @finder.all = all = scope old
     all._memory = old._memory
+    @scope_deploy()
 
   shuffle: ->
     @default_scope (all)-> all.shuffle()
@@ -68,23 +72,23 @@ class Mem.Rule
     @default_scope (all)-> all.sort sortBy
 
   relation_to_one: (key, target, ik)->
-    @inits.push =>
-      Object.defineProperty @model.prototype, key,
-        get: ->
-          Mem.Query[target].find(@[ik])
+    @_property[key] =
+      enumerable: true
+      get: ->
+        Mem.Query[target].find(@[ik])
 
   relation_to_many: (key, target, ik, qk)->
-    all = @finder.query.all
+    all = @finder.all
     @finder.use_cache key, (id)->
       Mem.Query[target].where "#{qk}": id
 
-    @inits.push =>
-      Object.defineProperty @model.prototype, key,
-        get: ->
-          all[key](@[ik])
+    @_property[key] =
+      enumerable: true
+      get: ->
+        all[key](@[ik])
 
   relation_tree: (key, ik, qk)->
-    all = @finder.query.all
+    all = @finder.all
     @finder.use_cache key, (id, n)->
       if n
         q = all.where "#{ik}": id
@@ -94,12 +98,14 @@ class Mem.Rule
       else
         all.where "#{qk}": id
 
-    @model.prototype[key] = (n)->
-      id = [@[qk]]
-      all[key] id, n
+    @_property[key] =
+      enumerable: true
+      value: (n)->
+        id = [@[qk]]
+        all[key] id, n
 
   relation_graph: (key, ik, qk)->
-    all = @finder.query.all
+    all = @finder.all
     @finder.use_cache key, (id, n)->
       q = all.where "#{qk}": id
       if n
@@ -111,8 +117,10 @@ class Mem.Rule
       else
         q
 
-    @model.prototype[key] = (n)->
-      all[key] [@[qk]], n
+    @_property[key] =
+      enumerable: true
+      value: (n)->
+        all[key] [@[qk]], n
 
   belongs_to: (to, option = {})->
     name = rename to
@@ -120,8 +128,9 @@ class Mem.Rule
     @relation_to_one name.base, target, key
 
     if dependent
+      path = _.property to
       @depend_on to
-      @finder.validate (o)-> o[to]?
+      @finder.validate path
 
   has_many: (to, option = {})->
     name = rename to.replace /s$/, ""

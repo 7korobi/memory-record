@@ -50,10 +50,10 @@
 
   describe("Collection", function() {
     var dml;
-    new Rule("col_value", function() {
+    new Rule("col_obj", function() {
       return this.order("_id");
     });
-    dml = Collection.col_value;
+    dml = Collection.col_obj;
     it("data refresh", function() {
       dml.clear_cache();
       dml.refresh();
@@ -67,13 +67,13 @@
           _id: 30
         }
       ]);
-      assert.deepEqual(Query.col_values.ids, [10, 30]);
+      assert.deepEqual(Query.col_objs.ids, [10, 30]);
       dml.set([
         {
           _id: 20
         }
       ]);
-      return assert.deepEqual(Query.col_values.ids, [20]);
+      return assert.deepEqual(Query.col_objs.ids, [20]);
     });
     it("data append methods", function() {
       dml.set([
@@ -88,32 +88,32 @@
           _id: 50
         }
       ]);
-      assert.deepEqual(Query.col_values.ids, [20, 40, 50]);
+      assert.deepEqual(Query.col_objs.ids, [20, 40, 50]);
       dml.add({
         _id: 60
       });
-      assert.deepEqual(Query.col_values.ids, [20, 40, 50, 60]);
+      assert.deepEqual(Query.col_objs.ids, [20, 40, 50, 60]);
       dml.append({
         _id: 70
       });
-      assert.deepEqual(Query.col_values.ids, [20, 40, 50, 60, 70]);
+      assert.deepEqual(Query.col_objs.ids, [20, 40, 50, 60, 70]);
       dml.create({
         _id: 80
       });
-      return assert.deepEqual(Query.col_values.ids, [20, 40, 50, 60, 70, 80]);
+      return assert.deepEqual(Query.col_objs.ids, [20, 40, 50, 60, 70, 80]);
     });
     it("data set & append for hash data", function() {
       dml.set({
         10: {},
         20: {}
       });
-      assert.deepEqual(Query.col_values.ids, [10, 20]);
+      assert.deepEqual(Query.col_objs.ids, [10, 20]);
       dml.merge({
         100: {},
         110: {},
         120: {}
       });
-      return assert.deepEqual(Query.col_values.ids, [10, 20, 100, 110, 120]);
+      return assert.deepEqual(Query.col_objs.ids, [10, 20, 100, 110, 120]);
     });
     it("remove methods", function() {
       dml.set({
@@ -130,11 +130,11 @@
           _id: 110
         }
       ]);
-      assert.deepEqual(Query.col_values.ids, [10, 20, 120]);
+      assert.deepEqual(Query.col_objs.ids, [10, 20, 120]);
       dml.remove({
         _id: 120
       });
-      return assert.deepEqual(Query.col_values.ids, [10, 20]);
+      return assert.deepEqual(Query.col_objs.ids, [10, 20]);
     });
     it("remove without data", function() {
       dml.set({
@@ -144,7 +144,7 @@
       dml.remove({
         _id: 999
       });
-      return assert.deepEqual(Query.col_values.ids, [10, 20]);
+      return assert.deepEqual(Query.col_objs.ids, [10, 20]);
     });
     return it("add bad data", function() {
       assert.throws(function() {
@@ -167,8 +167,8 @@
   ref = require("../memory-record.js"), Collection = ref.Collection, Query = ref.Query, Rule = ref.Rule;
 
   describe("Finder", function() {
-    new Rule("f_value", function() {});
-    Collection.f_value.set([
+    new Rule("f_obj", function() {});
+    Collection.f_obj.set([
       {
         _id: 10,
         data: {
@@ -181,32 +181,32 @@
         }
       }
     ]);
-    Collection.f_value.add({
+    Collection.f_obj.add({
       _id: "news",
       data: {
         msg: "Merge World!"
       }
     });
     it("ids", function() {
-      return assert.deepEqual(Query.f_values.ids, ["10", "30", "news"]);
+      return assert.deepEqual(Query.f_objs.ids, ["10", "30", "news"]);
     });
     it("list", function() {
-      return assert.deepEqual(Query.f_values.list, [
+      return assert.deepEqual(Query.f_objs.list, [
         {
           _id: 10,
-          f_value_id: 10,
+          f_obj_id: 10,
           data: {
             msg: "Hello World!"
           }
         }, {
           _id: 30,
-          f_value_id: 30,
+          f_obj_id: 30,
           data: {
             msg: "Bye World!"
           }
         }, {
           _id: "news",
-          f_value_id: "news",
+          f_obj_id: "news",
           data: {
             msg: "Merge World!"
           }
@@ -214,24 +214,24 @@
       ]);
     });
     return it("hash", function() {
-      return assert.deepEqual(Query.f_values.hash, {
+      return assert.deepEqual(Query.f_objs.hash, {
         10: {
           _id: 10,
-          f_value_id: 10,
+          f_obj_id: 10,
           data: {
             msg: "Hello World!"
           }
         },
         30: {
           _id: 30,
-          f_value_id: 30,
+          f_obj_id: 30,
           data: {
             msg: "Bye World!"
           }
         },
         news: {
           _id: "news",
-          f_value_id: "news",
+          f_obj_id: "news",
           data: {
             msg: "Merge World!"
           }
