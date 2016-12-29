@@ -3,7 +3,7 @@
 
 describe "sync", ()->
   it "set", ->
-    new Rule("test").schema ->
+    new Rule "test",  ->
 
     Collection.test.set [
       _id: 10

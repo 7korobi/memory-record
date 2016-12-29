@@ -1,47 +1,47 @@
 { Collection, Query, Rule, Model } = require("../memory-record.js")
 
 
-new Rule("model_spec").schema ->
+new Rule "m_obj",  ->
   class @model extends @model
 
 describe "Model", ()->
   it "rowid sequence", ->
-    Model.model_spec.create = (item)->
+    Model.m_obj.create = (item)->
       item.rowid = @rowid
-    Collection.model_spec.merge
+    Collection.m_obj.merge
       3: {}
       2: {}
       1: {}
-    assert.deepEqual Query.model_specs.list, [
-      { _id: 1, rowid: 0, model_spec_id: 1 }
-      { _id: 2, rowid: 1, model_spec_id: 2 }
-      { _id: 3, rowid: 2, model_spec_id: 3 }
+    assert.deepEqual Query.m_objs.list, [
+      { _id: 1, rowid: 0, m_obj_id: 1 }
+      { _id: 2, rowid: 1, m_obj_id: 2 }
+      { _id: 3, rowid: 2, m_obj_id: 3 }
     ]
-    assert Model.model_spec.rowid = 3
+    assert Model.m_obj.rowid = 3
 
   it "catch create event", ->
-    Model.model_spec.create = (item)->
+    Model.m_obj.create = (item)->
       item.rowid = @rowid
       item.created = true
 
-    Collection.model_spec.merge
+    Collection.m_obj.merge
       4: { a: 1 }
-    assert.deepEqual Query.model_specs.hash[4], { a: 1, _id: 4, model_spec_id: 4, rowid: 3, created: true }
+    assert.deepEqual Query.m_objs.hash[4], { a: 1, _id: 4, m_obj_id: 4, rowid: 3, created: true }
 
   it "catch update event", ->
-    Model.model_spec.update = (item, {rowid})->
+    Model.m_obj.update = (item, {rowid})->
       item.rowid = rowid
       item.updated = true
 
-    Collection.model_spec.merge
+    Collection.m_obj.merge
       4: { a: 2 }
-    assert.deepEqual Query.model_specs.hash[4], { a: 2, _id: 4, model_spec_id: 4, rowid: 3, updated: true }
+    assert.deepEqual Query.m_objs.hash[4], { a: 2, _id: 4, m_obj_id: 4, rowid: 3, updated: true }
 
   it "catch delete event", ->
-    Model.model_spec.delete = (old)->
+    Model.m_obj.delete = (old)->
       old.deleted = true
 
-    target = Query.model_specs.hash[3]
-    Collection.model_spec.del
+    target = Query.m_objs.hash[3]
+    Collection.m_obj.del
       _id: 3
-    assert.deepEqual target, { _id: 3, model_spec_id: 3, rowid: 2, deleted: true }
+    assert.deepEqual target, { _id: 3, m_obj_id: 3, rowid: 2, deleted: true }

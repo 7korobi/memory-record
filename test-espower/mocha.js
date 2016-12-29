@@ -50,10 +50,10 @@
 
   describe("Collection", function() {
     var dml;
-    new Rule("collection_spec").schema(function() {
+    new Rule("col_value", function() {
       return this.order("_id");
     });
-    dml = Collection.collection_spec;
+    dml = Collection.col_value;
     it("data refresh", function() {
       dml.clear_cache();
       dml.refresh();
@@ -67,13 +67,13 @@
           _id: 30
         }
       ]);
-      assert.deepEqual(Query.collection_specs.ids, [10, 30]);
+      assert.deepEqual(Query.col_values.ids, [10, 30]);
       dml.set([
         {
           _id: 20
         }
       ]);
-      return assert.deepEqual(Query.collection_specs.ids, [20]);
+      return assert.deepEqual(Query.col_values.ids, [20]);
     });
     it("data append methods", function() {
       dml.set([
@@ -88,32 +88,32 @@
           _id: 50
         }
       ]);
-      assert.deepEqual(Query.collection_specs.ids, [20, 40, 50]);
+      assert.deepEqual(Query.col_values.ids, [20, 40, 50]);
       dml.add({
         _id: 60
       });
-      assert.deepEqual(Query.collection_specs.ids, [20, 40, 50, 60]);
+      assert.deepEqual(Query.col_values.ids, [20, 40, 50, 60]);
       dml.append({
         _id: 70
       });
-      assert.deepEqual(Query.collection_specs.ids, [20, 40, 50, 60, 70]);
+      assert.deepEqual(Query.col_values.ids, [20, 40, 50, 60, 70]);
       dml.create({
         _id: 80
       });
-      return assert.deepEqual(Query.collection_specs.ids, [20, 40, 50, 60, 70, 80]);
+      return assert.deepEqual(Query.col_values.ids, [20, 40, 50, 60, 70, 80]);
     });
     it("data set & append for hash data", function() {
       dml.set({
         10: {},
         20: {}
       });
-      assert.deepEqual(Query.collection_specs.ids, [10, 20]);
+      assert.deepEqual(Query.col_values.ids, [10, 20]);
       dml.merge({
         100: {},
         110: {},
         120: {}
       });
-      return assert.deepEqual(Query.collection_specs.ids, [10, 20, 100, 110, 120]);
+      return assert.deepEqual(Query.col_values.ids, [10, 20, 100, 110, 120]);
     });
     it("remove methods", function() {
       dml.set({
@@ -130,11 +130,11 @@
           _id: 110
         }
       ]);
-      assert.deepEqual(Query.collection_specs.ids, [10, 20, 120]);
+      assert.deepEqual(Query.col_values.ids, [10, 20, 120]);
       dml.remove({
         _id: 120
       });
-      return assert.deepEqual(Query.collection_specs.ids, [10, 20]);
+      return assert.deepEqual(Query.col_values.ids, [10, 20]);
     });
     it("remove without data", function() {
       dml.set({
@@ -144,7 +144,7 @@
       dml.remove({
         _id: 999
       });
-      return assert.deepEqual(Query.collection_specs.ids, [10, 20]);
+      return assert.deepEqual(Query.col_values.ids, [10, 20]);
     });
     return it("add bad data", function() {
       assert.throws(function() {
@@ -167,8 +167,8 @@
   ref = require("../memory-record.js"), Collection = ref.Collection, Query = ref.Query, Rule = ref.Rule;
 
   describe("Finder", function() {
-    new Rule("finder_spec").schema(function() {});
-    Collection.finder_spec.set([
+    new Rule("f_value", function() {});
+    Collection.f_value.set([
       {
         _id: 10,
         data: {
@@ -181,32 +181,32 @@
         }
       }
     ]);
-    Collection.finder_spec.add({
+    Collection.f_value.add({
       _id: "news",
       data: {
         msg: "Merge World!"
       }
     });
     it("ids", function() {
-      return assert.deepEqual(Query.finder_specs.ids, ["10", "30", "news"]);
+      return assert.deepEqual(Query.f_values.ids, ["10", "30", "news"]);
     });
     it("list", function() {
-      return assert.deepEqual(Query.finder_specs.list, [
+      return assert.deepEqual(Query.f_values.list, [
         {
           _id: 10,
-          finder_spec_id: 10,
+          f_value_id: 10,
           data: {
             msg: "Hello World!"
           }
         }, {
           _id: 30,
-          finder_spec_id: 30,
+          f_value_id: 30,
           data: {
             msg: "Bye World!"
           }
         }, {
           _id: "news",
-          finder_spec_id: "news",
+          f_value_id: "news",
           data: {
             msg: "Merge World!"
           }
@@ -214,24 +214,24 @@
       ]);
     });
     return it("hash", function() {
-      return assert.deepEqual(Query.finder_specs.hash, {
+      return assert.deepEqual(Query.f_values.hash, {
         10: {
           _id: 10,
-          finder_spec_id: 10,
+          f_value_id: 10,
           data: {
             msg: "Hello World!"
           }
         },
         30: {
           _id: 30,
-          finder_spec_id: 30,
+          f_value_id: 30,
           data: {
             msg: "Bye World!"
           }
         },
         news: {
           _id: "news",
-          finder_spec_id: "news",
+          f_value_id: "news",
           data: {
             msg: "Merge World!"
           }
@@ -249,7 +249,7 @@
 
   ref = require("../memory-record.js"), Collection = ref.Collection, Query = ref.Query, Rule = ref.Rule;
 
-  new Rule("map_reduce_spec").schema(function() {
+  new Rule("mr_obj", function() {
     return this.model = (function(superClass) {
       extend(model, superClass);
 
@@ -279,10 +279,10 @@
     })(this.model);
   });
 
-  Collection.map_reduce_spec.reset([]);
+  Collection.mr_obj.reset([]);
 
   for (n = i = 1; i <= 100; n = ++i) {
-    Collection.map_reduce_spec.create({
+    Collection.mr_obj.create({
       _id: n,
       type: "ABCDE"[n % 5]
     });
@@ -290,14 +290,14 @@
 
   describe("map_reduce", function() {
     it("distinct", function() {
-      return assert.deepEqual(Query.map_reduce_specs.distinct("case.typed", "min_is").ids, [1, 2, 3, 4, 5]);
+      return assert.deepEqual(Query.mr_objs.distinct("case.typed", "min_is").ids, [1, 2, 3, 4, 5]);
     });
     it("set", function() {
-      return assert(Query.map_reduce_specs.list.length === 100);
+      return assert(Query.mr_objs.list.length === 100);
     });
     it("reduce", function() {
       var full, ref1, ref2, typed;
-      ref1 = Query.map_reduce_specs.reduce, full = ref1.full, (ref2 = ref1["case"], typed = ref2.typed);
+      ref1 = Query.mr_objs.reduce, full = ref1.full, (ref2 = ref1["case"], typed = ref2.typed);
       assert(full.list.join("") === "BCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEA");
       assert.deepEqual(full.set, {
         A: true,
@@ -312,8 +312,8 @@
         avg: 52.5,
         max: 100,
         min: 5,
-        max_is: Query.map_reduce_specs.hash[100],
-        min_is: Query.map_reduce_specs.hash[5]
+        max_is: Query.mr_objs.hash[100],
+        min_is: Query.mr_objs.hash[5]
       });
       assert_only(typed.B, {
         count: 20,
@@ -321,8 +321,8 @@
         avg: 48.5,
         max: 96,
         min: 1,
-        max_is: Query.map_reduce_specs.hash[96],
-        min_is: Query.map_reduce_specs.hash[1],
+        max_is: Query.mr_objs.hash[96],
+        min_is: Query.mr_objs.hash[1],
         set: {
           B: true
         }
@@ -334,8 +334,8 @@
         avg: 49.5,
         max: 97,
         min: 2,
-        max_is: Query.map_reduce_specs.hash[97],
-        min_is: Query.map_reduce_specs.hash[2]
+        max_is: Query.mr_objs.hash[97],
+        min_is: Query.mr_objs.hash[2]
       });
       assert_only(typed.D, {
         count: 20,
@@ -343,8 +343,8 @@
         avg: 50.5,
         max: 98,
         min: 3,
-        max_is: Query.map_reduce_specs.hash[98],
-        min_is: Query.map_reduce_specs.hash[3]
+        max_is: Query.mr_objs.hash[98],
+        min_is: Query.mr_objs.hash[3]
       });
       return assert_only(typed.E, {
         count: 20,
@@ -352,13 +352,13 @@
         avg: 51.5,
         max: 99,
         min: 4,
-        max_is: Query.map_reduce_specs.hash[99],
-        min_is: Query.map_reduce_specs.hash[4]
+        max_is: Query.mr_objs.hash[99],
+        min_is: Query.mr_objs.hash[4]
       });
     });
     return it("queried reduce", function() {
       var full, ref1, ref2, typed;
-      ref1 = Query.map_reduce_specs.where(function(arg) {
+      ref1 = Query.mr_objs.where(function(arg) {
         var _id;
         _id = arg._id;
         return _id % 2;
@@ -404,7 +404,7 @@
 
   ref = require("../memory-record.js"), Collection = ref.Collection, Query = ref.Query, Rule = ref.Rule, Model = ref.Model;
 
-  new Rule("model_spec").schema(function() {
+  new Rule("m_obj", function() {
     return this.model = (function(superClass) {
       extend(model, superClass);
 
@@ -419,81 +419,81 @@
 
   describe("Model", function() {
     it("rowid sequence", function() {
-      Model.model_spec.create = function(item) {
+      Model.m_obj.create = function(item) {
         return item.rowid = this.rowid;
       };
-      Collection.model_spec.merge({
+      Collection.m_obj.merge({
         3: {},
         2: {},
         1: {}
       });
-      assert.deepEqual(Query.model_specs.list, [
+      assert.deepEqual(Query.m_objs.list, [
         {
           _id: 1,
           rowid: 0,
-          model_spec_id: 1
+          m_obj_id: 1
         }, {
           _id: 2,
           rowid: 1,
-          model_spec_id: 2
+          m_obj_id: 2
         }, {
           _id: 3,
           rowid: 2,
-          model_spec_id: 3
+          m_obj_id: 3
         }
       ]);
-      return assert(Model.model_spec.rowid = 3);
+      return assert(Model.m_obj.rowid = 3);
     });
     it("catch create event", function() {
-      Model.model_spec.create = function(item) {
+      Model.m_obj.create = function(item) {
         item.rowid = this.rowid;
         return item.created = true;
       };
-      Collection.model_spec.merge({
+      Collection.m_obj.merge({
         4: {
           a: 1
         }
       });
-      return assert.deepEqual(Query.model_specs.hash[4], {
+      return assert.deepEqual(Query.m_objs.hash[4], {
         a: 1,
         _id: 4,
-        model_spec_id: 4,
+        m_obj_id: 4,
         rowid: 3,
         created: true
       });
     });
     it("catch update event", function() {
-      Model.model_spec.update = function(item, arg) {
+      Model.m_obj.update = function(item, arg) {
         var rowid;
         rowid = arg.rowid;
         item.rowid = rowid;
         return item.updated = true;
       };
-      Collection.model_spec.merge({
+      Collection.m_obj.merge({
         4: {
           a: 2
         }
       });
-      return assert.deepEqual(Query.model_specs.hash[4], {
+      return assert.deepEqual(Query.m_objs.hash[4], {
         a: 2,
         _id: 4,
-        model_spec_id: 4,
+        m_obj_id: 4,
         rowid: 3,
         updated: true
       });
     });
     return it("catch delete event", function() {
       var target;
-      Model.model_spec["delete"] = function(old) {
+      Model.m_obj["delete"] = function(old) {
         return old.deleted = true;
       };
-      target = Query.model_specs.hash[3];
-      Collection.model_spec.del({
+      target = Query.m_objs.hash[3];
+      Collection.m_obj.del({
         _id: 3
       });
       return assert.deepEqual(target, {
         _id: 3,
-        model_spec_id: 3,
+        m_obj_id: 3,
         rowid: 2,
         deleted: true
       });
@@ -509,7 +509,7 @@
 
   describe("Query deploy", function() {
     return it("set", function() {
-      new Rule("test").schema(function() {
+      new Rule("q_obj", function() {
         this.order("data.order[2]");
         return this.scope(function(all) {
           return {
@@ -524,7 +524,7 @@
           };
         });
       });
-      Collection.test.set([
+      Collection.q_obj.set([
         {
           _id: 100,
           key: "A",
@@ -545,7 +545,7 @@
           }
         }
       ]);
-      Collection.test.create({
+      Collection.q_obj.create({
         _id: "news",
         key: "A",
         list: ["A"],
@@ -555,7 +555,7 @@
           options: ["abcde", "cdefg", "defgh"]
         }
       });
-      Collection.test.create({
+      Collection.q_obj.create({
         _id: "newnews",
         key: "C",
         list: ["C"],
@@ -565,63 +565,63 @@
           options: ["bcdef", "cdefg", "defgh"]
         }
       });
-      return assert.deepEqual(Query.tests.pluck("_id"), ["newnews", "news", 20, 100]);
+      return assert.deepEqual(Query.q_objs.pluck("_id"), ["newnews", "news", 20, 100]);
     });
   });
 
   describe("Query", function() {
     it("where selection", function() {
-      assert.deepEqual(Query.tests.where(function(o) {
+      assert.deepEqual(Query.q_objs.where(function(o) {
         return o.key === "C";
       }).pluck("_id"), ["newnews"]);
-      assert.deepEqual(Query.tests.where({
+      assert.deepEqual(Query.q_objs.where({
         key: "A"
       }).pluck("_id"), ["news", 100]);
-      assert.deepEqual(Query.tests.where({
+      assert.deepEqual(Query.q_objs.where({
         "data.msg": /Merge/
       }).pluck("_id"), ["newnews", "news"]);
-      return assert.deepEqual(Query.tests.where({
+      return assert.deepEqual(Query.q_objs.where({
         "data.options.1": "cdefg"
       }).pluck("_id"), ["newnews", "news"]);
     });
     it("where selection for Array (same SQL IN)", function() {
-      return assert.deepEqual(Query.tests.where({
+      return assert.deepEqual(Query.q_objs.where({
         key: ["C", "A"]
       }).pluck("_id"), ["newnews", "news", 100]);
     });
     it("in selection", function() {
-      assert.deepEqual(Query.tests["in"]({
+      assert.deepEqual(Query.q_objs["in"]({
         key: "A"
       }).pluck("_id"), ["news", 20, 100]);
-      assert.deepEqual(Query.tests["in"]({
+      assert.deepEqual(Query.q_objs["in"]({
         list: "A"
       }).pluck("_id"), ["news", 20, 100]);
-      return assert.deepEqual(Query.tests["in"]({
+      return assert.deepEqual(Query.q_objs["in"]({
         "data.options": /abcde/
       }).pluck("_id"), ["news", 20, 100]);
     });
     it("sort", function() {
-      assert.deepEqual(Query.tests.pluck("_id"), ["newnews", "news", 20, 100]);
-      assert.deepEqual(Query.tests.sort("_id").pluck("_id"), [20, 100, "newnews", "news"]);
-      assert.deepEqual(Query.tests.sort(["_id"], ["asc"]).pluck("_id"), [20, 100, "newnews", "news"]);
-      return assert.deepEqual(Query.tests.sort(["_id"], ["desc"]).pluck("_id"), [100, 20, "news", "newnews"]);
+      assert.deepEqual(Query.q_objs.pluck("_id"), ["newnews", "news", 20, 100]);
+      assert.deepEqual(Query.q_objs.sort("_id").pluck("_id"), [20, 100, "newnews", "news"]);
+      assert.deepEqual(Query.q_objs.sort(["_id"], ["asc"]).pluck("_id"), [20, 100, "newnews", "news"]);
+      return assert.deepEqual(Query.q_objs.sort(["_id"], ["desc"]).pluck("_id"), [100, 20, "news", "newnews"]);
     });
     it("shuffle", function() {
-      assert.deepEqual(Query.tests.shuffle().pluck("_id").sort(), [100, 20, "newnews", "news"]);
-      return assert.notDeepEqual(Query.tests.shuffle().pluck("_id"), [100, 20, "newnews", "news"]);
+      assert.deepEqual(Query.q_objs.shuffle().pluck("_id").sort(), [100, 20, "newnews", "news"]);
+      return assert.notDeepEqual(Query.q_objs.shuffle().pluck("_id"), [100, 20, "newnews", "news"]);
     });
     return it("use scope", function() {
-      assert.deepEqual(Query.tests.key("A").pluck("_id"), ["news", 100]);
-      assert.deepEqual(Query.tests.key("C").pluck("_id"), ["newnews"]);
-      assert.deepEqual(Query.tests.id_by_key("A"), ["news", 100]);
-      assert.deepEqual(Query.tests.id_by_key("C"), ["newnews"]);
-      Collection.test.clear_cache();
-      assert(Query.tests["key"]);
-      assert(Query.tests["id_by_key"]);
-      assert(Query.tests["key:[\"A\"]"]);
-      assert(Query.tests["key:[\"C\"]"]);
-      assert(Query.tests["id_by_key:[\"A\"]"]);
-      return assert(Query.tests["id_by_key:[\"C\"]"]);
+      assert.deepEqual(Query.q_objs.key("A").pluck("_id"), ["news", 100]);
+      assert.deepEqual(Query.q_objs.key("C").pluck("_id"), ["newnews"]);
+      assert.deepEqual(Query.q_objs.id_by_key("A"), ["news", 100]);
+      assert.deepEqual(Query.q_objs.id_by_key("C"), ["newnews"]);
+      Collection.q_obj.clear_cache();
+      assert(Query.q_objs["key"]);
+      assert(Query.q_objs["id_by_key"]);
+      assert(Query.q_objs["key:[\"A\"]"]);
+      assert(Query.q_objs["key:[\"C\"]"]);
+      assert(Query.q_objs["id_by_key:[\"A\"]"]);
+      return assert(Query.q_objs["id_by_key:[\"C\"]"]);
     });
   });
 
@@ -636,7 +636,7 @@
 
   describe("relation", function() {
     it("set", function() {
-      new Rule("base").schema(function() {
+      new Rule("base", function() {
         this.order("_id");
         this.graph({
           directed: true
@@ -647,12 +647,12 @@
           by: "ids"
         });
       });
-      new Rule("test").schema(function() {
+      new Rule("test", function() {
         return this.belongs_to("base", {
           dependent: true
         });
       });
-      new Rule("tag").schema(function() {});
+      new Rule("tag", function() {});
       Collection.tag.set({
         a: {},
         b: {},
@@ -742,11 +742,6 @@
       }).ids, [500]);
     });
   });
-
-}).call(this);
-
-(function() {
-
 
 }).call(this);
 
@@ -874,7 +869,7 @@
 
   describe("sync", function() {
     return it("set", function() {
-      new Rule("test").schema(function() {});
+      new Rule("test", function() {});
       Collection.test.set([
         {
           _id: 10,

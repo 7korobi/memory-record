@@ -13,7 +13,7 @@ rename = (base)->
 Mem = module.exports
 
 class Mem.Rule
-  constructor: (base)->
+  constructor: (base, cb)->
     @name = rename base
     @depend_on base
 
@@ -22,6 +22,8 @@ class Mem.Rule
 
     @dml = new Mem.Base.Collection @
     @inits = []
+    @schema cb if cb
+    return
 
   schema: (cb)->
     cb.call @, @dml

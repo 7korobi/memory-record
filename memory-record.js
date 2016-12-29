@@ -1,6 +1,6 @@
 /**
  memory-record - activerecord like in-memory data manager
- @version v0.2.21
+ @version v0.2.22
  @link https://github.com/7korobi/memory-record
  @license 
 **/
@@ -831,13 +831,17 @@
   Mem = module.exports;
 
   Mem.Rule = (function() {
-    function Rule(base) {
+    function Rule(base, cb) {
       this.name = rename(base);
       this.depend_on(base);
       this.finder = new Mem.Base.Finder("_id");
       this.model = Mem.Base.Model;
       this.dml = new Mem.Base.Collection(this);
       this.inits = [];
+      if (cb) {
+        this.schema(cb);
+      }
+      return;
     }
 
     Rule.prototype.schema = function(cb) {

@@ -3,13 +3,13 @@
 
 describe "Query deploy", ()->
   it "set", ->
-    new Rule("test").schema ->
+    new Rule "q_obj",  ->
       @order "data.order[2]"
       @scope (all)->
         key:       (key)-> all.where((o)-> o.key == key)
         id_by_key: (key)-> all.key(key).pluck("_id")
 
-    Collection.test.set [
+    Collection.q_obj.set [
       _id: 100
       key: "A"
       list: ["A"]
@@ -34,7 +34,7 @@ describe "Query deploy", ()->
           "defgh"
         ]
     ]
-    Collection.test.create
+    Collection.q_obj.create
       _id: "news"
       key: "A"
       list: ["A"]
@@ -47,7 +47,7 @@ describe "Query deploy", ()->
           "defgh"
         ]
 
-    Collection.test.create
+    Collection.q_obj.create
       _id: "newnews"
       key: "C"
       list: ["C"]
@@ -60,44 +60,44 @@ describe "Query deploy", ()->
           "defgh"
         ]
 
-    assert.deepEqual Query.tests.pluck("_id"), ["newnews", "news", 20, 100]
+    assert.deepEqual Query.q_objs.pluck("_id"), ["newnews", "news", 20, 100]
 
 describe "Query", ()->
   it "where selection", ->
-    assert.deepEqual Query.tests.where((o)-> o.key == "C" ).pluck("_id"), ["newnews"]
-    assert.deepEqual Query.tests.where(key: "A").pluck("_id"), ["news", 100]
-    assert.deepEqual Query.tests.where("data.msg": /Merge/).pluck("_id"), ["newnews", "news"]
-    assert.deepEqual Query.tests.where("data.options.1": "cdefg").pluck("_id"), ["newnews", "news"]
+    assert.deepEqual Query.q_objs.where((o)-> o.key == "C" ).pluck("_id"), ["newnews"]
+    assert.deepEqual Query.q_objs.where(key: "A").pluck("_id"), ["news", 100]
+    assert.deepEqual Query.q_objs.where("data.msg": /Merge/).pluck("_id"), ["newnews", "news"]
+    assert.deepEqual Query.q_objs.where("data.options.1": "cdefg").pluck("_id"), ["newnews", "news"]
 
   it "where selection for Array (same SQL IN)", ->
-    assert.deepEqual Query.tests.where(key: ["C","A"]).pluck("_id"), ["newnews", "news", 100]
+    assert.deepEqual Query.q_objs.where(key: ["C","A"]).pluck("_id"), ["newnews", "news", 100]
 
   it "in selection", ->
-    assert.deepEqual Query.tests.in(key: "A").pluck("_id"), ["news", 20, 100]
-    assert.deepEqual Query.tests.in(list: "A").pluck("_id"), ["news", 20, 100]
-    assert.deepEqual Query.tests.in("data.options": /abcde/).pluck("_id"), ["news", 20, 100]
+    assert.deepEqual Query.q_objs.in(key: "A").pluck("_id"), ["news", 20, 100]
+    assert.deepEqual Query.q_objs.in(list: "A").pluck("_id"), ["news", 20, 100]
+    assert.deepEqual Query.q_objs.in("data.options": /abcde/).pluck("_id"), ["news", 20, 100]
 
   it "sort", ->
-    assert.deepEqual Query.tests.pluck("_id"), ["newnews", "news", 20, 100]
-    assert.deepEqual Query.tests.sort("_id").pluck("_id"), [20, 100, "newnews", "news"]
-    assert.deepEqual Query.tests.sort(["_id"],["asc"]).pluck("_id"), [20, 100, "newnews", "news"]
-    assert.deepEqual Query.tests.sort(["_id"],["desc"]).pluck("_id"), [100, 20, "news", "newnews"]
+    assert.deepEqual Query.q_objs.pluck("_id"), ["newnews", "news", 20, 100]
+    assert.deepEqual Query.q_objs.sort("_id").pluck("_id"), [20, 100, "newnews", "news"]
+    assert.deepEqual Query.q_objs.sort(["_id"],["asc"]).pluck("_id"), [20, 100, "newnews", "news"]
+    assert.deepEqual Query.q_objs.sort(["_id"],["desc"]).pluck("_id"), [100, 20, "news", "newnews"]
 
   it "shuffle", ->
-    assert.deepEqual Query.tests.shuffle().pluck("_id").sort(), [100, 20, "newnews", "news"]
-    assert.notDeepEqual Query.tests.shuffle().pluck("_id"),     [100, 20, "newnews", "news"]
+    assert.deepEqual Query.q_objs.shuffle().pluck("_id").sort(), [100, 20, "newnews", "news"]
+    assert.notDeepEqual Query.q_objs.shuffle().pluck("_id"),     [100, 20, "newnews", "news"]
     # fail per 4 * 3 * 2 * 1   if  shuffled order same as sorted.
 
   it "use scope", ->
-    assert.deepEqual Query.tests.key("A").pluck("_id"), ["news", 100]
-    assert.deepEqual Query.tests.key("C").pluck("_id"), ["newnews"]
-    assert.deepEqual Query.tests.id_by_key("A"), ["news", 100]
-    assert.deepEqual Query.tests.id_by_key("C"), ["newnews"]
-    Collection.test.clear_cache()
-    assert Query.tests["key"]
-    assert Query.tests["id_by_key"]
-    assert Query.tests["""key:["A"]"""]
-    assert Query.tests["""key:["C"]"""]
-    assert Query.tests["""id_by_key:["A"]"""]
-    assert Query.tests["""id_by_key:["C"]"""]
+    assert.deepEqual Query.q_objs.key("A").pluck("_id"), ["news", 100]
+    assert.deepEqual Query.q_objs.key("C").pluck("_id"), ["newnews"]
+    assert.deepEqual Query.q_objs.id_by_key("A"), ["news", 100]
+    assert.deepEqual Query.q_objs.id_by_key("C"), ["newnews"]
+    Collection.q_obj.clear_cache()
+    assert Query.q_objs["key"]
+    assert Query.q_objs["id_by_key"]
+    assert Query.q_objs["""key:["A"]"""]
+    assert Query.q_objs["""key:["C"]"""]
+    assert Query.q_objs["""id_by_key:["A"]"""]
+    assert Query.q_objs["""id_by_key:["C"]"""]
 

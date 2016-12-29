@@ -3,17 +3,17 @@ _ = require "lodash"
 
 describe "relation", ()->
   it "set", ->
-    new Rule("base").schema ->
+    new Rule "base",  ->
       @order "_id"
       @graph directed: true
       @tree()
       @has_many "tests"
       @has_many "tags", by: "ids"
 
-    new Rule("test").schema ->
+    new Rule "test",  ->
       @belongs_to "base", dependent: true
 
-    new Rule("tag").schema ->
+    new Rule "tag",  ->
 
     Collection.tag.set
       a: {}
