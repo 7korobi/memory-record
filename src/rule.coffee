@@ -110,7 +110,7 @@ class Mem.Rule
       q = all.where "#{qk}": id
       if n
         for a in q.pluck(ik) when a?
-          for k in a when key?
+          for k in a when k?
             id.push k
 
         all[key] _.uniq(id), n - 1

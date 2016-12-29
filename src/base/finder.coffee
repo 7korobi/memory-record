@@ -35,6 +35,17 @@ class Mem.Base.Finder
       last:
         enumerable: false
         get: -> @[@length - 1]
+      pluck:
+        enumerable: false
+        value: ->
+          keys = arguments
+          switch keys.length
+            when 0
+              @map -> null
+            when 1
+              @map (o)-> _.at(o, keys[0])[0]
+            else
+              @map (o)-> _.at(o, keys...)
 
   validate: (cb)->
     @validates.push cb

@@ -122,17 +122,7 @@ class Mem.Base.Query
     for id in ids when o = @hash[id]
       o
 
-  pluck: (keys...)->
-    switch keys.length
-      when 0
-        @list.map -> null
-      when 1
-        @list.map (o)->
-          [a] = _.at o, keys
-          a
-      else
-        @list.map (o)->
-          _.at o, keys
+  pluck: -> @list.pluck arguments...
 
   Object.defineProperties @prototype,
     reduce:

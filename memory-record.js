@@ -150,6 +150,27 @@
           get: function() {
             return this[this.length - 1];
           }
+        },
+        pluck: {
+          enumerable: false,
+          value: function() {
+            var keys;
+            keys = arguments;
+            switch (keys.length) {
+              case 0:
+                return this.map(function() {
+                  return null;
+                });
+              case 1:
+                return this.map(function(o) {
+                  return _.at(o, keys[0])[0];
+                });
+              default:
+                return this.map(function(o) {
+                  return _.at.apply(_, [o].concat(slice.call(keys)));
+                });
+            }
+          }
         }
       };
     }
@@ -720,24 +741,8 @@
     };
 
     Query.prototype.pluck = function() {
-      var keys;
-      keys = 1 <= arguments.length ? slice.call(arguments, 0) : [];
-      switch (keys.length) {
-        case 0:
-          return this.list.map(function() {
-            return null;
-          });
-        case 1:
-          return this.list.map(function(o) {
-            var a;
-            a = _.at(o, keys)[0];
-            return a;
-          });
-        default:
-          return this.list.map(function(o) {
-            return _.at(o, keys);
-          });
-      }
+      var ref;
+      return (ref = this.list).pluck.apply(ref, arguments);
     };
 
     Object.defineProperties(Query.prototype, {
@@ -995,7 +1000,7 @@
             if (a != null) {
               for (j = 0, len1 = a.length; j < len1; j++) {
                 k = a[j];
-                if (key != null) {
+                if (k != null) {
                   id.push(k);
                 }
               }
