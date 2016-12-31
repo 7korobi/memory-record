@@ -31,6 +31,7 @@ class Mem.Rule
     if @model == Mem.Base.Model
       class @model extends @model
     @model.id   = @name.id
+    @model.ids  = @name.ids
     @model.list = @name.list
     Object.defineProperties @model.prototype, @property
 

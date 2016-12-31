@@ -846,6 +846,7 @@
         })(this.model);
       }
       this.model.id = this.name.id;
+      this.model.ids = this.name.ids;
       this.model.list = this.name.list;
       Object.defineProperties(this.model.prototype, this.property);
       if (this.model.validate) {
