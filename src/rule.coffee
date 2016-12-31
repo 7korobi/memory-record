@@ -97,23 +97,23 @@ class Mem.Rule
       value: (n)->
         all[key] [@_id], n
 
-  relation_graph: (key, ik, qk)->
+  relation_graph: (key, ik)->
     all = @finder.all
-    @finder.use_cache key, (id, n)->
-      q = all.where "#{qk}": id
+    @finder.use_cache key, (_id, n)->
+      q = all.where _id: _id
       if n
         for a in q.pluck(ik) when a?
           for k in a when k?
-            id.push k
+            _id.push k
 
-        all[key] _.uniq(id), n - 1
+        all[key] _.uniq(_id), n - 1
       else
         q
 
     @property[key] =
       enumerable: true
       value: (n)->
-        all[key] [@[qk]], n
+        all[key] [@_id], n
 
   belongs_to: (to, option = {})->
     name = rename to
@@ -138,13 +138,13 @@ class Mem.Rule
     @relation_to_many name.list, target, ik, qk
 
   tree: (option={})->
-    @relation_tree "nodes", @name.id, "_id"
+    @relation_tree "nodes", @name.id
     @belongs_to @name.base, option
 
   graph: (option={})->
     { directed, cost } = option
     ik = @name.ids
     @relation_to_many @name.list, @name.list, ik, "_id"
-    @relation_graph "path", ik, "_id"
+    @relation_graph "path", ik
     unless directed
       true # todo

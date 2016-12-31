@@ -970,16 +970,14 @@
       };
     };
 
-    Rule.prototype.relation_graph = function(key, ik, qk) {
+    Rule.prototype.relation_graph = function(key, ik) {
       var all;
       all = this.finder.all;
-      this.finder.use_cache(key, function(id, n) {
-        var a, i, j, k, len, len1, obj, q, ref;
-        q = all.where((
-          obj = {},
-          obj["" + qk] = id,
-          obj
-        ));
+      this.finder.use_cache(key, function(_id, n) {
+        var a, i, j, k, len, len1, q, ref;
+        q = all.where({
+          _id: _id
+        });
         if (n) {
           ref = q.pluck(ik);
           for (i = 0, len = ref.length; i < len; i++) {
@@ -988,12 +986,12 @@
               for (j = 0, len1 = a.length; j < len1; j++) {
                 k = a[j];
                 if (k != null) {
-                  id.push(k);
+                  _id.push(k);
                 }
               }
             }
           }
-          return all[key](_.uniq(id), n - 1);
+          return all[key](_.uniq(_id), n - 1);
         } else {
           return q;
         }
@@ -1001,7 +999,7 @@
       return this.property[key] = {
         enumerable: true,
         value: function(n) {
-          return all[key]([this[qk]], n);
+          return all[key]([this._id], n);
         }
       };
     };
@@ -1044,7 +1042,7 @@
       if (option == null) {
         option = {};
       }
-      this.relation_tree("nodes", this.name.id, "_id");
+      this.relation_tree("nodes", this.name.id);
       return this.belongs_to(this.name.base, option);
     };
 
@@ -1056,7 +1054,7 @@
       directed = option.directed, cost = option.cost;
       ik = this.name.ids;
       this.relation_to_many(this.name.list, this.name.list, ik, "_id");
-      this.relation_graph("path", ik, "_id");
+      this.relation_graph("path", ik);
       if (!directed) {
         return true;
       }
