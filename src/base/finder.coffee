@@ -56,8 +56,13 @@ class Mem.Base.Finder
             else
               @map (o)-> _.at(o, keys...)
 
-  validates: ->
-    Finder.validates[@name.base]
+  depends: ->
+    for f in Finder.depends[@name.base]
+      f @
+    return
+
+  validates: (item)->
+    validate item, Finder.validates[@name.base]
 
   use_cache: (key, val)->
     @scope[key] = val
@@ -76,13 +81,9 @@ class Mem.Base.Finder
 
     return
 
-  cleanup: ->
-    for f in Finder.depends[@name.base]
-      f @
-
   save: (query)->
     for item in query.list
-      for chk in @validates() when ! chk item
+      if @validates item
         @model.save item
 
   calculate: (query)->
@@ -187,7 +188,7 @@ class Mem.Base.Finder
         @model.delete old.item
         delete _memory[item._id]
       return
-    @cleanup()
+    @depends()
 
   reset: (from, parent)->
     { _memory } = @all
@@ -200,7 +201,7 @@ class Mem.Base.Finder
         @model.update item, old.item
       else
         @model.delete old
-    @cleanup()
+    @depends()
 
   merge: (from, parent)->
     { _memory } = @all
@@ -214,7 +215,7 @@ class Mem.Base.Finder
       unless item._id
         throw new Error "detect bad data: #{JSON.stringify item}"
 
-      if validate item, @validates()
+      if @validates item
         o = { item, emits: [] }
         @model.map_reduce item, (keys..., cmd)=>
           o.emits.push [keys, cmd]
@@ -228,5 +229,5 @@ class Mem.Base.Finder
           @model.rowid++
         _memory[item._id] = o
       return
-    @cleanup()
+    @depends()
 

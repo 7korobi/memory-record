@@ -189,8 +189,17 @@
       };
     }
 
-    Finder.prototype.validates = function() {
-      return Finder.validates[this.name.base];
+    Finder.prototype.depends = function() {
+      var f, i, len, ref;
+      ref = Finder.depends[this.name.base];
+      for (i = 0, len = ref.length; i < len; i++) {
+        f = ref[i];
+        f(this);
+      }
+    };
+
+    Finder.prototype.validates = function(item) {
+      return validate(item, Finder.validates[this.name.base]);
     };
 
     Finder.prototype.use_cache = function(key, val) {
@@ -216,35 +225,17 @@
       this.all.cache = {};
     };
 
-    Finder.prototype.cleanup = function() {
-      var f, i, len, ref, results;
-      ref = Finder.depends[this.name.base];
-      results = [];
-      for (i = 0, len = ref.length; i < len; i++) {
-        f = ref[i];
-        results.push(f(this));
-      }
-      return results;
-    };
-
     Finder.prototype.save = function(query) {
-      var chk, i, item, len, ref, results;
+      var i, item, len, ref, results;
       ref = query.list;
       results = [];
       for (i = 0, len = ref.length; i < len; i++) {
         item = ref[i];
-        results.push((function() {
-          var j, len1, ref1, results1;
-          ref1 = this.validates();
-          results1 = [];
-          for (j = 0, len1 = ref1.length; j < len1; j++) {
-            chk = ref1[j];
-            if (!chk(item)) {
-              results1.push(this.model.save(item));
-            }
-          }
-          return results1;
-        }).call(this));
+        if (this.validates(item)) {
+          results.push(this.model.save(item));
+        } else {
+          results.push(void 0);
+        }
       }
       return results;
     };
@@ -405,7 +396,7 @@
           }
         };
       })(this));
-      return this.cleanup();
+      return this.depends();
     };
 
     Finder.prototype.reset = function(from, parent) {
@@ -422,7 +413,7 @@
           this.model["delete"](old);
         }
       }
-      return this.cleanup();
+      return this.depends();
     };
 
     Finder.prototype.merge = function(from, parent) {
@@ -441,7 +432,7 @@
           if (!item._id) {
             throw new Error("detect bad data: " + (JSON.stringify(item)));
           }
-          if (validate(item, _this.validates())) {
+          if (_this.validates(item)) {
             o = {
               item: item,
               emits: []
@@ -463,7 +454,7 @@
           }
         };
       })(this));
-      return this.cleanup();
+      return this.depends();
     };
 
     return Finder;
