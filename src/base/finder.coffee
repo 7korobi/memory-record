@@ -26,7 +26,8 @@ Mem = module.exports
 class Mem.Base.Finder
   constructor: (@model)->
     @all = Mem.Base.Query.build @
-    @scope = { @all }
+    @all.cache = {}
+    @scope = {}
     @validates = []
     @property =
       first:
@@ -50,18 +51,21 @@ class Mem.Base.Finder
   validate: (cb)->
     @validates.push cb
 
-  use_cache: (key, query_call)->
-    switch query_call?.constructor
+  use_cache: (key, val)->
+    @scope[key] = val
+    switch val?.constructor
       when Function
         @all[key] = (args...)=>
-          @all["#{key}:#{JSON.stringify args}"] ?= query_call args...
+          @all.cache["#{key}:#{JSON.stringify args}"] ?= val args...
       else
-        @all[key] = query_call
+        @all[key] = val
 
   clear_cache: ->
     delete @all._reduce
     delete @all._list
     delete @all._hash
+    @all.cache = {}
+
     return
 
   save: (query)->

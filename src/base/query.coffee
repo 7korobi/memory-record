@@ -35,8 +35,11 @@ class Mem.Base.Query
     new Mem.Base.Query { _finder, _all_ids, _group, _filters, _sort }, ->
       @_memory = OBJ()
 
-  constructor: ({ @_finder, @_all_ids, @_group, @_filters, @_sort }, tap)->
+  constructor: (base, tap)->
+    @_copy base
     tap.call @
+
+  _copy: ({ @_finder, @_all_ids, @_group, @_filters, @_sort })->
 
   in: (req)->
     query_parser @, req, (q, target, req, path)->
@@ -105,12 +108,6 @@ class Mem.Base.Query
 
   shuffle: ->
     new Query @, -> @_sort = [Math.random]
-
-  clear: ->
-    delete @_reduce
-    delete @_list
-    delete @_hash
-    delete @_memory
 
   save: ->
     @_finder.save(@)

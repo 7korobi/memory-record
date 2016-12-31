@@ -15,7 +15,7 @@ module.exports = (grunt)->
     pkg: pkg
 
     watch:
-      files: ['{src,test}/**/*.coffee']
+      files: ['{src,test}/**/*.coffee', 'package.json']
       tasks: ['make', 'spec']
 
     coffee:

@@ -1,6 +1,6 @@
 /**
  memory-record - activerecord like in-memory data manager
- @version v0.2.23
+ @version v0.3.0
  @link https://github.com/7korobi/memory-record
  @license 
 **/
@@ -134,9 +134,8 @@
     function Finder(model) {
       this.model = model;
       this.all = Mem.Base.Query.build(this);
-      this.scope = {
-        all: this.all
-      };
+      this.all.cache = {};
+      this.scope = {};
       this.validates = [];
       this.property = {
         first: {
@@ -179,18 +178,19 @@
       return this.validates.push(cb);
     };
 
-    Finder.prototype.use_cache = function(key, query_call) {
-      switch (query_call != null ? query_call.constructor : void 0) {
+    Finder.prototype.use_cache = function(key, val) {
+      this.scope[key] = val;
+      switch (val != null ? val.constructor : void 0) {
         case Function:
           return this.all[key] = (function(_this) {
             return function() {
               var args, base1, name;
               args = 1 <= arguments.length ? slice.call(arguments, 0) : [];
-              return (base1 = _this.all)[name = key + ":" + (JSON.stringify(args))] != null ? base1[name] : base1[name] = query_call.apply(null, args);
+              return (base1 = _this.all.cache)[name = key + ":" + (JSON.stringify(args))] != null ? base1[name] : base1[name] = val.apply(null, args);
             };
           })(this);
         default:
-          return this.all[key] = query_call;
+          return this.all[key] = val;
       }
     };
 
@@ -198,6 +198,7 @@
       delete this.all._reduce;
       delete this.all._list;
       delete this.all._hash;
+      this.all.cache = {};
     };
 
     Finder.prototype.save = function(query) {
@@ -552,10 +553,14 @@
       });
     };
 
-    function Query(arg, tap) {
-      this._finder = arg._finder, this._all_ids = arg._all_ids, this._group = arg._group, this._filters = arg._filters, this._sort = arg._sort;
+    function Query(base, tap) {
+      this._copy(base);
       tap.call(this);
     }
+
+    Query.prototype._copy = function(arg) {
+      this._finder = arg._finder, this._all_ids = arg._all_ids, this._group = arg._group, this._filters = arg._filters, this._sort = arg._sort;
+    };
 
     Query.prototype["in"] = function(req) {
       return query_parser(this, req, function(q, target, req, path) {
@@ -713,13 +718,6 @@
       });
     };
 
-    Query.prototype.clear = function() {
-      delete this._reduce;
-      delete this._list;
-      delete this._hash;
-      return delete this._memory;
-    };
-
     Query.prototype.save = function() {
       return this._finder.save(this);
     };
@@ -853,8 +851,8 @@
       if (this.model.validate) {
         this.finder.validates.unshift(this.model.validate);
       }
-      Mem.Model[this.name.base] = this.finder.model = this.model;
       Mem.Collection[this.name.base] = this.dml;
+      Mem.Model[this.name.base] = this.finder.model = this.model;
       Mem.Query[this.name.list] = this.finder.all;
       return this;
     };
@@ -878,28 +876,21 @@
       });
     };
 
-    Rule.prototype.scope_deploy = function() {
-      var key, query_call, ref, results;
-      ref = this.finder.scope;
+    Rule.prototype.scope = function(cb) {
+      var key, ref, results, val;
+      ref = cb(this.finder.all);
       results = [];
       for (key in ref) {
-        query_call = ref[key];
-        results.push(this.finder.use_cache(key, query_call));
+        val = ref[key];
+        results.push(this.finder.use_cache(key, val));
       }
       return results;
     };
 
-    Rule.prototype.scope = function(cb) {
-      this.finder.scope = cb(this.finder.all);
-      return this.scope_deploy();
-    };
-
     Rule.prototype.default_scope = function(scope) {
-      var all, old;
-      old = this.finder.all;
-      Mem.Query[this.name.list] = this.finder.all = all = scope(old);
-      all._memory = old._memory;
-      return this.scope_deploy();
+      var all;
+      all = this.finder.all;
+      return all._copy(scope(all));
     };
 
     Rule.prototype.shuffle = function() {
@@ -948,37 +939,33 @@
       };
     };
 
-    Rule.prototype.relation_tree = function(key, ik, qk) {
+    Rule.prototype.relation_tree = function(key, ik) {
       var all;
       all = this.finder.all;
-      this.finder.use_cache(key, function(id, n) {
-        var i, k, len, obj, obj1, q, ref;
+      this.finder.use_cache(key, function(_id, n) {
+        var i, k, len, obj, q, ref;
         if (n) {
           q = all.where((
             obj = {},
-            obj["" + ik] = id,
+            obj["" + ik] = _id,
             obj
           ));
-          ref = q.pluck(qk);
+          ref = q.ids;
           for (i = 0, len = ref.length; i < len; i++) {
             k = ref[i];
-            id.push(k);
+            _id.push(k);
           }
-          return all[key](_.uniq(id), n - 1);
+          return all[key](_.uniq(_id), n - 1);
         } else {
-          return all.where((
-            obj1 = {},
-            obj1["" + qk] = id,
-            obj1
-          ));
+          return all.where({
+            _id: _id
+          });
         }
       });
       return this.property[key] = {
         enumerable: true,
         value: function(n) {
-          var id;
-          id = [this[qk]];
-          return all[key](id, n);
+          return all[key]([this._id], n);
         }
       };
     };

@@ -610,18 +610,36 @@
       assert.deepEqual(Query.q_objs.shuffle().pluck("_id").sort(), [100, 20, "newnews", "news"]);
       return assert.notDeepEqual(Query.q_objs.shuffle().pluck("_id"), [100, 20, "newnews", "news"]);
     });
-    return it("use scope", function() {
+    it("use scope", function() {
       assert.deepEqual(Query.q_objs.key("A").pluck("_id"), ["news", 100]);
       assert.deepEqual(Query.q_objs.key("C").pluck("_id"), ["newnews"]);
       assert.deepEqual(Query.q_objs.id_by_key("A"), ["news", 100]);
       assert.deepEqual(Query.q_objs.id_by_key("C"), ["newnews"]);
+      assert(Query.q_objs.cache["key:[\"A\"]"]);
+      assert(Query.q_objs.cache["key:[\"C\"]"]);
+      assert(Query.q_objs.cache["id_by_key:[\"A\"]"]);
+      assert(Query.q_objs.cache["id_by_key:[\"C\"]"]);
       Collection.q_obj.clear_cache();
       assert(Query.q_objs["key"]);
       assert(Query.q_objs["id_by_key"]);
-      assert(Query.q_objs["key:[\"A\"]"]);
-      assert(Query.q_objs["key:[\"C\"]"]);
-      assert(Query.q_objs["id_by_key:[\"A\"]"]);
-      return assert(Query.q_objs["id_by_key:[\"C\"]"]);
+      assert(!Query.q_objs.cache["key:[\"A\"]"]);
+      assert(!Query.q_objs.cache["key:[\"C\"]"]);
+      assert(!Query.q_objs.cache["id_by_key:[\"A\"]"]);
+      return assert(!Query.q_objs.cache["id_by_key:[\"C\"]"]);
+    });
+    return it("reset for updated", function() {
+      assert.deepEqual(Query.q_objs.key("A").pluck("_id"), ["news", 100]);
+      Collection.q_obj.add({
+        _id: "appendex",
+        key: "A",
+        data: {
+          order: [0, 0, 10]
+        }
+      });
+      assert.deepEqual(Query.q_objs.where({
+        key: "A"
+      }).pluck("_id"), ["news", 100, "appendex"]);
+      return assert.deepEqual(Query.q_objs.key("A").pluck("_id"), ["news", 100, "appendex"]);
     });
   });
 
@@ -725,10 +743,10 @@
       return assert.deepEqual(Query.bases.hash[500].path(3).ids, [100, 200, 300, 400, 500]);
     });
     it("model graph cached", function() {
-      assert.deepEqual(Query.bases["path:[[500],3]"].ids, [100, 200, 300, 400, 500]);
-      assert.deepEqual(Query.bases["path:[[500,400,300],2]"].ids, [100, 200, 300, 400, 500]);
-      assert.deepEqual(Query.bases["path:[[500,400,300,100],1]"].ids, [100, 200, 300, 400, 500]);
-      return assert.deepEqual(Query.bases["path:[[500,400,300,100,200],0]"].ids, [100, 200, 300, 400, 500]);
+      assert.deepEqual(Query.bases.cache["path:[[500],3]"].ids, [100, 200, 300, 400, 500]);
+      assert.deepEqual(Query.bases.cache["path:[[500,400,300],2]"].ids, [100, 200, 300, 400, 500]);
+      assert.deepEqual(Query.bases.cache["path:[[500,400,300,100],1]"].ids, [100, 200, 300, 400, 500]);
+      return assert.deepEqual(Query.bases.cache["path:[[500,400,300,100,200],0]"].ids, [100, 200, 300, 400, 500]);
     });
     it("model tree", function() {
       assert.deepEqual(Query.bases.hash[500].nodes(0).ids, [500]);

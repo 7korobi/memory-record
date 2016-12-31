@@ -35,8 +35,8 @@ class Mem.Rule
     Object.defineProperties @model.prototype, @property
 
     @finder.validates.unshift @model.validate if @model.validate
-    Mem.Model[@name.base] = @finder.model = @model
     Mem.Collection[@name.base] = @dml
+    Mem.Model[@name.base] = @finder.model = @model
     Mem.Query[@name.list] = @finder.all
     @
 
@@ -50,19 +50,13 @@ class Mem.Rule
     Mem.Composite[parent].push ->
       Mem.Collection[parent].rule.finder.rehash()
 
-  scope_deploy: ->
-    for key, query_call of @finder.scope
-      @finder.use_cache key, query_call
-
   scope: (cb)->
-    @finder.scope = cb @finder.all
-    @scope_deploy()
+    for key, val of cb @finder.all
+      @finder.use_cache key, val
 
   default_scope: (scope)->
-    old = @finder.all
-    Mem.Query[@name.list] = @finder.all = all = scope old
-    all._memory = old._memory
-    @scope_deploy()
+    { all } = @finder
+    all._copy scope all
 
   shuffle: ->
     @default_scope (all)-> all.shuffle()
@@ -87,22 +81,21 @@ class Mem.Rule
       get: ->
         all[key](@[ik])
 
-  relation_tree: (key, ik, qk)->
+  relation_tree: (key, ik)->
     all = @finder.all
-    @finder.use_cache key, (id, n)->
+    @finder.use_cache key, (_id, n)->
       if n
-        q = all.where "#{ik}": id
-        for k in q.pluck(qk)
-          id.push k
-        all[key] _.uniq(id), n - 1
+        q = all.where "#{ik}": _id
+        for k in q.ids
+          _id.push k
+        all[key] _.uniq(_id), n - 1
       else
-        all.where "#{qk}": id
+        all.where _id: _id
 
     @property[key] =
       enumerable: true
       value: (n)->
-        id = [@[qk]]
-        all[key] id, n
+        all[key] [@_id], n
 
   relation_graph: (key, ik, qk)->
     all = @finder.all

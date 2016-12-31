@@ -83,10 +83,10 @@ describe "relation", ()->
     assert.deepEqual Query.bases.hash[500].path(3).ids, [100, 200, 300, 400, 500]
 
   it "model graph cached", ->
-    assert.deepEqual Query.bases["""path:[[500],3]"""].ids, [100, 200, 300, 400, 500]
-    assert.deepEqual Query.bases["""path:[[500,400,300],2]"""].ids, [100, 200, 300, 400, 500]
-    assert.deepEqual Query.bases["""path:[[500,400,300,100],1]"""].ids, [100, 200, 300, 400, 500]
-    assert.deepEqual Query.bases["""path:[[500,400,300,100,200],0]"""].ids, [100, 200, 300, 400, 500]
+    assert.deepEqual Query.bases.cache["""path:[[500],3]"""].ids, [100, 200, 300, 400, 500]
+    assert.deepEqual Query.bases.cache["""path:[[500,400,300],2]"""].ids, [100, 200, 300, 400, 500]
+    assert.deepEqual Query.bases.cache["""path:[[500,400,300,100],1]"""].ids, [100, 200, 300, 400, 500]
+    assert.deepEqual Query.bases.cache["""path:[[500,400,300,100,200],0]"""].ids, [100, 200, 300, 400, 500]
 
   it "model tree", ->
     assert.deepEqual Query.bases.hash[500].nodes(0).ids,                     [500]
