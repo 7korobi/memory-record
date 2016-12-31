@@ -897,8 +897,8 @@
 
   describe("sync", function() {
     return it("set", function() {
-      new Rule("test", function() {});
-      Collection.test.set([
+      new Rule("sync_obj", function() {});
+      Collection.sync_obj.set([
         {
           _id: 10,
           key: "A",
@@ -915,7 +915,7 @@
           }
         }
       ]);
-      Collection.test.create({
+      Collection.sync_obj.create({
         _id: "news",
         key: "A",
         list: ["A"],
@@ -923,7 +923,7 @@
           msg: "Merge World!"
         }
       });
-      Collection.test.create({
+      Collection.sync_obj.create({
         _id: "newnews",
         key: "C",
         list: ["C"],
@@ -931,7 +931,7 @@
           msg: "Merge New World!"
         }
       });
-      return assert.deepEqual(Query.tests.ids, ["10", "20", "news", "newnews"]);
+      return assert.deepEqual(Query.sync_objs.ids, ["10", "20", "news", "newnews"]);
     });
   });
 

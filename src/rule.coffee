@@ -17,7 +17,7 @@ class Mem.Rule
     @name = rename base
     @depend_on base
 
-    @finder = new Mem.Base.Finder "_id"
+    @finder = new Mem.Base.Finder "_id", @name
     @model = Mem.Base.Model
 
     @dml = new Mem.Base.Collection @
@@ -35,21 +35,18 @@ class Mem.Rule
     @model.list = @name.list
     Object.defineProperties @model.prototype, @property
 
-    @finder.validates.unshift @model.validate if @model.validate
+    @validate @model.validate if @model.validate
     Mem.Collection[@name.base] = @dml
     Mem.Model[@name.base] = @finder.model = @model
     Mem.Query[@name.list] = @finder.all
     @
 
-  composite: ->
-    for f in Mem.Composite[@name.base]
-      f()
-    return
+  validate: (cb)->
+    Mem.Base.Finder.set_validate @name.base, cb
 
   depend_on: (parent)->
-    Mem.Composite[parent] ?= []
-    Mem.Composite[parent].push ->
-      Mem.Collection[parent].rule.finder.rehash()
+    Mem.Base.Finder.set_depend parent, (finder)->
+      finder.clear_cache()
 
   scope: (cb)->
     for key, val of cb @finder.all
@@ -121,9 +118,8 @@ class Mem.Rule
     @relation_to_one name.base, target, key
 
     if dependent
-      path = _.property to
-      @depend_on to
-      @finder.validate path
+      @depend_on name.base
+      @validate _.property name.base
 
   has_many: (to, option = {})->
     name = rename to.replace /s$/, ""

@@ -37,5 +37,4 @@ class Mem.Base.Collection
   rehash:      f_clear
 
   constructor: (@rule)->
-    @validates = []
 

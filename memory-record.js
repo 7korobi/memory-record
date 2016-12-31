@@ -77,7 +77,6 @@
 
     function Collection(rule) {
       this.rule = rule;
-      this.validates = [];
     }
 
     return Collection;
@@ -131,12 +130,32 @@
   Mem = module.exports;
 
   Mem.Base.Finder = (function() {
-    function Finder(model) {
+    Finder.depends = {};
+
+    Finder.validates = {};
+
+    Finder.set_depend = function(key, cb) {
+      var base1;
+      if ((base1 = this.depends)[key] == null) {
+        base1[key] = [];
+      }
+      return this.depends[key].push(cb);
+    };
+
+    Finder.set_validate = function(key, cb) {
+      var base1;
+      if ((base1 = this.validates)[key] == null) {
+        base1[key] = [];
+      }
+      return this.validates[key].push(cb);
+    };
+
+    function Finder(model, name) {
       this.model = model;
+      this.name = name;
       this.all = Mem.Base.Query.build(this);
       this.all.cache = {};
       this.scope = {};
-      this.validates = [];
       this.property = {
         first: {
           enumerable: false,
@@ -174,10 +193,6 @@
       };
     }
 
-    Finder.prototype.validate = function(cb) {
-      return this.validates.push(cb);
-    };
-
     Finder.prototype.use_cache = function(key, val) {
       this.scope[key] = val;
       switch (val != null ? val.constructor : void 0) {
@@ -201,6 +216,17 @@
       this.all.cache = {};
     };
 
+    Finder.prototype.cleanup = function() {
+      var f, i, len, ref, results;
+      ref = Finder.depends[this.name.base];
+      results = [];
+      for (i = 0, len = ref.length; i < len; i++) {
+        f = ref[i];
+        results.push(f(this));
+      }
+      return results;
+    };
+
     Finder.prototype.save = function(query) {
       var chk, i, item, len, ref, results;
       ref = query.list;
@@ -209,7 +235,7 @@
         item = ref[i];
         results.push((function() {
           var j, len1, ref1, results1;
-          ref1 = this.validates;
+          ref1 = Finder.validates[this.name.base];
           results1 = [];
           for (j = 0, len1 = ref1.length; j < len1; j++) {
             chk = ref1[j];
@@ -379,7 +405,7 @@
           }
         };
       })(this));
-      return this.clear_cache();
+      return this.cleanup();
     };
 
     Finder.prototype.reset = function(from, parent) {
@@ -396,7 +422,7 @@
           this.model["delete"](old);
         }
       }
-      return this.clear_cache();
+      return this.cleanup();
     };
 
     Finder.prototype.merge = function(from, parent) {
@@ -415,7 +441,7 @@
           if (!item._id) {
             throw new Error("detect bad data: " + (JSON.stringify(item)));
           }
-          if (validate(item, _this.validates)) {
+          if (validate(item, Finder.validates[_this.name.base])) {
             o = {
               item: item,
               emits: []
@@ -437,7 +463,7 @@
           }
         };
       })(this));
-      return this.clear_cache();
+      return this.cleanup();
     };
 
     return Finder;
@@ -821,7 +847,7 @@
     function Rule(base, cb) {
       this.name = rename(base);
       this.depend_on(base);
-      this.finder = new Mem.Base.Finder("_id");
+      this.finder = new Mem.Base.Finder("_id", this.name);
       this.model = Mem.Base.Model;
       this.dml = new Mem.Base.Collection(this);
       this.property = {};
@@ -850,7 +876,7 @@
       this.model.list = this.name.list;
       Object.defineProperties(this.model.prototype, this.property);
       if (this.model.validate) {
-        this.finder.validates.unshift(this.model.validate);
+        this.validate(this.model.validate);
       }
       Mem.Collection[this.name.base] = this.dml;
       Mem.Model[this.name.base] = this.finder.model = this.model;
@@ -858,22 +884,13 @@
       return this;
     };
 
-    Rule.prototype.composite = function() {
-      var f, i, len, ref;
-      ref = Mem.Composite[this.name.base];
-      for (i = 0, len = ref.length; i < len; i++) {
-        f = ref[i];
-        f();
-      }
+    Rule.prototype.validate = function(cb) {
+      return Mem.Base.Finder.set_validate(this.name.base, cb);
     };
 
     Rule.prototype.depend_on = function(parent) {
-      var base1;
-      if ((base1 = Mem.Composite)[parent] == null) {
-        base1[parent] = [];
-      }
-      return Mem.Composite[parent].push(function() {
-        return Mem.Collection[parent].rule.finder.rehash();
+      return Mem.Base.Finder.set_depend(parent, function(finder) {
+        return finder.clear_cache();
       });
     };
 
@@ -1002,7 +1019,7 @@
     };
 
     Rule.prototype.belongs_to = function(to, option) {
-      var dependent, key, name, path, ref, ref1, target;
+      var dependent, key, name, ref, ref1, target;
       if (option == null) {
         option = {};
       }
@@ -1010,9 +1027,8 @@
       key = (ref = option.key) != null ? ref : name.id, target = (ref1 = option.target) != null ? ref1 : name.list, dependent = option.dependent;
       this.relation_to_one(name.base, target, key);
       if (dependent) {
-        path = _.property(to);
-        this.depend_on(to);
-        return this.finder.validate(path);
+        this.depend_on(name.base);
+        return this.validate(_.property(name.base));
       }
     };
 

@@ -24,11 +24,19 @@ validate = (item, chklist)->
 
 Mem = module.exports
 class Mem.Base.Finder
-  constructor: (@model)->
+  @depends:   {}
+  @validates: {}
+  @set_depend: (key, cb)->
+    @depends[key] ?= []
+    @depends[key].push cb
+  @set_validate: (key, cb)->
+    @validates[key] ?= []
+    @validates[key].push cb
+
+  constructor: (@model, @name)->
     @all = Mem.Base.Query.build @
     @all.cache = {}
     @scope = {}
-    @validates = []
     @property =
       first:
         enumerable: false
@@ -48,9 +56,6 @@ class Mem.Base.Finder
             else
               @map (o)-> _.at(o, keys...)
 
-  validate: (cb)->
-    @validates.push cb
-
   use_cache: (key, val)->
     @scope[key] = val
     switch val?.constructor
@@ -68,9 +73,13 @@ class Mem.Base.Finder
 
     return
 
+  cleanup: ->
+    for f in Finder.depends[@name.base]
+      f @
+
   save: (query)->
     for item in query.list
-      for chk in @validates when ! chk item
+      for chk in Finder.validates[@name.base] when ! chk item
         @model.save item
 
   calculate: (query)->
@@ -175,7 +184,7 @@ class Mem.Base.Finder
         @model.delete old.item
         delete _memory[item._id]
       return
-    @clear_cache()
+    @cleanup()
 
   reset: (from, parent)->
     { _memory } = @all
@@ -188,7 +197,7 @@ class Mem.Base.Finder
         @model.update item, old.item
       else
         @model.delete old
-    @clear_cache()
+    @cleanup()
 
   merge: (from, parent)->
     { _memory } = @all
@@ -202,7 +211,7 @@ class Mem.Base.Finder
       unless item._id
         throw new Error "detect bad data: #{JSON.stringify item}"
 
-      if validate item, @validates
+      if validate item, Finder.validates[@name.base]
         o = { item, emits: [] }
         @model.map_reduce item, (keys..., cmd)=>
           o.emits.push [keys, cmd]
@@ -216,5 +225,5 @@ class Mem.Base.Finder
           @model.rowid++
         _memory[item._id] = o
       return
-    @clear_cache()
+    @cleanup()
 

@@ -3,9 +3,9 @@
 
 describe "sync", ()->
   it "set", ->
-    new Rule "test",  ->
+    new Rule "sync_obj",  ->
 
-    Collection.test.set [
+    Collection.sync_obj.set [
       _id: 10
       key: "A"
       list: ["A"]
@@ -18,18 +18,18 @@ describe "sync", ()->
       data:
         msg: "Bye World!"
     ]
-    Collection.test.create
+    Collection.sync_obj.create
       _id: "news"
       key: "A"
       list: ["A"]
       data:
         msg: "Merge World!"
 
-    Collection.test.create
+    Collection.sync_obj.create
       _id: "newnews"
       key: "C"
       list: ["C"]
       data:
         msg: "Merge New World!"
 
-    assert.deepEqual Query.tests.ids, ["10", "20", "news", "newnews"]
+    assert.deepEqual Query.sync_objs.ids, ["10", "20", "news", "newnews"]
