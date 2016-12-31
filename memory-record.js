@@ -86,7 +86,7 @@
 }).call(this);
 
 (function() {
-  var Mem, OBJ, _, each, validate,
+  var Mem, OBJ, _, composite_field, each, validate,
     slice = [].slice;
 
   _ = require("lodash");
@@ -127,31 +127,27 @@
     return true;
   };
 
+  composite_field = function(o, field) {
+    var list;
+    list = field + "s";
+    o[list] = {};
+    return o["set_" + field] = function(key, cb) {
+      var base1;
+      if ((base1 = o[list])[key] == null) {
+        base1[key] = [];
+      }
+      return o[list][key].push(cb);
+    };
+  };
+
   Mem = module.exports;
 
   Mem.Base.Finder = (function() {
-    Finder.depends = {};
+    composite_field(Finder, "depend");
 
-    Finder.validates = {};
+    composite_field(Finder, "validate");
 
-    Finder.set_depend = function(key, cb) {
-      var base1;
-      if ((base1 = this.depends)[key] == null) {
-        base1[key] = [];
-      }
-      return this.depends[key].push(cb);
-    };
-
-    Finder.set_validate = function(key, cb) {
-      var base1;
-      if ((base1 = this.validates)[key] == null) {
-        base1[key] = [];
-      }
-      return this.validates[key].push(cb);
-    };
-
-    function Finder(model, name) {
-      this.model = model;
+    function Finder(name) {
       this.name = name;
       this.all = Mem.Base.Query.build(this);
       this.all.cache = {};
@@ -192,6 +188,10 @@
         }
       };
     }
+
+    Finder.prototype.validates = function() {
+      return Finder.validates[this.name.base];
+    };
 
     Finder.prototype.use_cache = function(key, val) {
       this.scope[key] = val;
@@ -235,7 +235,7 @@
         item = ref[i];
         results.push((function() {
           var j, len1, ref1, results1;
-          ref1 = Finder.validates[this.name.base];
+          ref1 = this.validates();
           results1 = [];
           for (j = 0, len1 = ref1.length; j < len1; j++) {
             chk = ref1[j];
@@ -441,7 +441,7 @@
           if (!item._id) {
             throw new Error("detect bad data: " + (JSON.stringify(item)));
           }
-          if (validate(item, Finder.validates[_this.name.base])) {
+          if (validate(item, _this.validates())) {
             o = {
               item: item,
               emits: []
@@ -847,7 +847,7 @@
     function Rule(base, cb) {
       this.name = rename(base);
       this.depend_on(base);
-      this.finder = new Mem.Base.Finder("_id", this.name);
+      this.finder = new Mem.Base.Finder(this.name);
       this.model = Mem.Base.Model;
       this.dml = new Mem.Base.Collection(this);
       this.property = {};

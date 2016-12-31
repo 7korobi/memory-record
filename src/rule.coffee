@@ -17,7 +17,7 @@ class Mem.Rule
     @name = rename base
     @depend_on base
 
-    @finder = new Mem.Base.Finder "_id", @name
+    @finder = new Mem.Base.Finder @name
     @model = Mem.Base.Model
 
     @dml = new Mem.Base.Collection @

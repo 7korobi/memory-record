@@ -21,19 +21,19 @@ validate = (item, chklist)->
     return false
   true
 
+composite_field = (o, field)->
+  list = "#{field}s"
+  o[list] = {}
+  o["set_#{field}"] = (key, cb)->
+    o[list][key] ?= []
+    o[list][key].push cb
 
 Mem = module.exports
 class Mem.Base.Finder
-  @depends:   {}
-  @validates: {}
-  @set_depend: (key, cb)->
-    @depends[key] ?= []
-    @depends[key].push cb
-  @set_validate: (key, cb)->
-    @validates[key] ?= []
-    @validates[key].push cb
+  composite_field @, "depend"
+  composite_field @, "validate"
 
-  constructor: (@model, @name)->
+  constructor: (@name)->
     @all = Mem.Base.Query.build @
     @all.cache = {}
     @scope = {}
@@ -55,6 +55,9 @@ class Mem.Base.Finder
               @map (o)-> _.at(o, keys[0])[0]
             else
               @map (o)-> _.at(o, keys...)
+
+  validates: ->
+    Finder.validates[@name.base]
 
   use_cache: (key, val)->
     @scope[key] = val
@@ -79,7 +82,7 @@ class Mem.Base.Finder
 
   save: (query)->
     for item in query.list
-      for chk in Finder.validates[@name.base] when ! chk item
+      for chk in @validates() when ! chk item
         @model.save item
 
   calculate: (query)->
@@ -211,7 +214,7 @@ class Mem.Base.Finder
       unless item._id
         throw new Error "detect bad data: #{JSON.stringify item}"
 
-      if validate item, Finder.validates[@name.base]
+      if validate item, @validates()
         o = { item, emits: [] }
         @model.map_reduce item, (keys..., cmd)=>
           o.emits.push [keys, cmd]
