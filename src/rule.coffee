@@ -86,9 +86,7 @@ class Mem.Rule
     @finder.use_cache key, (_id, n)->
       if n
         q = all.where "#{ik}": _id
-        for k in q.ids
-          _id.push k
-        all[key] _.uniq(_id), n - 1
+        all[key] q.ids, n - 1
       else
         all.where _id: _id
 
@@ -102,6 +100,7 @@ class Mem.Rule
     @finder.use_cache key, (_id, n)->
       q = all.where _id: _id
       if n
+        _id = []
         for a in q.pluck(ik) when a?
           for k in a when k?
             _id.push k

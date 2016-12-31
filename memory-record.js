@@ -943,19 +943,14 @@
       var all;
       all = this.finder.all;
       this.finder.use_cache(key, function(_id, n) {
-        var i, k, len, obj, q, ref;
+        var obj, q;
         if (n) {
           q = all.where((
             obj = {},
             obj["" + ik] = _id,
             obj
           ));
-          ref = q.ids;
-          for (i = 0, len = ref.length; i < len; i++) {
-            k = ref[i];
-            _id.push(k);
-          }
-          return all[key](_.uniq(_id), n - 1);
+          return all[key](q.ids, n - 1);
         } else {
           return all.where({
             _id: _id
@@ -979,6 +974,7 @@
           _id: _id
         });
         if (n) {
+          _id = [];
           ref = q.pluck(ik);
           for (i = 0, len = ref.length; i < len; i++) {
             a = ref[i];

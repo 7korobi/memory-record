@@ -646,7 +646,9 @@
 }).call(this);
 
 (function() {
-  var Collection, Query, Rule, _, ref;
+  var Collection, Query, Rule, _, ref,
+    extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
+    hasProp = {}.hasOwnProperty;
 
   ref = require("../memory-record.js"), Collection = ref.Collection, Query = ref.Query, Rule = ref.Rule;
 
@@ -661,9 +663,17 @@
         });
         this.tree();
         this.has_many("tests");
-        return this.has_many("tags", {
+        this.has_many("tags", {
           by: "ids"
         });
+        return this.model = (function(superClass) {
+          extend(model, superClass);
+
+          function model() {}
+
+          return model;
+
+        })(this.model);
       });
       new Rule("test", function() {
         return this.belongs_to("base", {
@@ -736,28 +746,28 @@
       assert.deepEqual(Query.bases.list[0].bases.ids, [200, 300]);
       return assert.deepEqual(Query.bases.list[0].tags.ids, ["a"]);
     });
-    it("model graph", function() {
-      assert.deepEqual(Query.bases.hash[500].path(0).ids, [500]);
-      assert.deepEqual(Query.bases.hash[500].path(1).ids, [300, 400, 500]);
-      assert.deepEqual(Query.bases.hash[500].path(2).ids, [100, 300, 400, 500]);
-      return assert.deepEqual(Query.bases.hash[500].path(3).ids, [100, 200, 300, 400, 500]);
-    });
-    it("model graph cached", function() {
-      assert.deepEqual(Query.bases.cache["path:[[500],3]"].ids, [100, 200, 300, 400, 500]);
-      assert.deepEqual(Query.bases.cache["path:[[500,400,300],2]"].ids, [100, 200, 300, 400, 500]);
-      assert.deepEqual(Query.bases.cache["path:[[500,400,300,100],1]"].ids, [100, 200, 300, 400, 500]);
-      return assert.deepEqual(Query.bases.cache["path:[[500,400,300,100,200],0]"].ids, [100, 200, 300, 400, 500]);
-    });
     it("model tree", function() {
       assert.deepEqual(Query.bases.hash[500].nodes(0).ids, [500]);
-      assert.deepEqual(Query.bases.hash[500].nodes(1).ids, [400, 500]);
-      assert.deepEqual(Query.bases.hash[500].nodes(2).ids, [100, 400, 500]);
-      return assert.deepEqual(Query.bases.hash[500].nodes(3).ids, [100, 200, 300, 400, 500]);
+      assert.deepEqual(Query.bases.hash[500].nodes(1).ids, [400]);
+      assert.deepEqual(Query.bases.hash[500].nodes(2).ids, [100]);
+      return assert.deepEqual(Query.bases.hash[500].nodes(3).ids, [200, 300]);
+    });
+    it("model graph", function() {
+      assert.deepEqual(Query.bases.hash[500].path(0).ids, [500]);
+      assert.deepEqual(Query.bases.hash[500].path(1).ids, [300, 400]);
+      assert.deepEqual(Query.bases.hash[500].path(2).ids, [100, 300]);
+      return assert.deepEqual(Query.bases.hash[500].path(3).ids, [200, 300]);
+    });
+    it("model graph cached", function() {
+      assert.deepEqual(Query.bases.cache["path:[[500],3]"].ids, [200, 300]);
+      assert.deepEqual(Query.bases.cache["path:[[400,300],2]"].ids, [200, 300]);
+      assert.deepEqual(Query.bases.cache["path:[[100,300],1]"].ids, [200, 300]);
+      return assert.deepEqual(Query.bases.cache["path:[[200,300],0]"].ids, [200, 300]);
     });
     return it("complex case", function() {
-      return assert.deepEqual(Query.bases.hash[500].nodes(1)["in"]({
+      return assert.deepEqual(Query.bases.hash[500].nodes(3)["in"]({
         tag_ids: "b"
-      }).ids, [500]);
+      }).ids, [200]);
     });
   });
 

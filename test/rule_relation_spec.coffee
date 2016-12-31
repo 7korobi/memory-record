@@ -9,6 +9,8 @@ describe "relation", ()->
       @tree()
       @has_many "tests"
       @has_many "tags", by: "ids"
+      class @model extends @model
+        constructor: ->
 
     new Rule "test",  ->
       @belongs_to "base", dependent: true
@@ -76,23 +78,23 @@ describe "relation", ()->
     assert.deepEqual Query.bases.list[0].bases.ids, [200, 300]
     assert.deepEqual Query.bases.list[0].tags.ids, ["a"]
 
+  it "model tree", ->
+    assert.deepEqual Query.bases.hash[500].nodes(0).ids, [500]
+    assert.deepEqual Query.bases.hash[500].nodes(1).ids, [400]
+    assert.deepEqual Query.bases.hash[500].nodes(2).ids, [100]
+    assert.deepEqual Query.bases.hash[500].nodes(3).ids, [200, 300]
+
   it "model graph", ->
-    assert.deepEqual Query.bases.hash[500].path(0).ids,                     [500]
-    assert.deepEqual Query.bases.hash[500].path(1).ids,           [300, 400, 500]
-    assert.deepEqual Query.bases.hash[500].path(2).ids, [100,      300, 400, 500]
-    assert.deepEqual Query.bases.hash[500].path(3).ids, [100, 200, 300, 400, 500]
+    assert.deepEqual Query.bases.hash[500].path(0).ids, [500]
+    assert.deepEqual Query.bases.hash[500].path(1).ids, [300, 400]
+    assert.deepEqual Query.bases.hash[500].path(2).ids, [100, 300]
+    assert.deepEqual Query.bases.hash[500].path(3).ids, [200, 300]
 
   it "model graph cached", ->
-    assert.deepEqual Query.bases.cache["""path:[[500],3]"""].ids, [100, 200, 300, 400, 500]
-    assert.deepEqual Query.bases.cache["""path:[[500,400,300],2]"""].ids, [100, 200, 300, 400, 500]
-    assert.deepEqual Query.bases.cache["""path:[[500,400,300,100],1]"""].ids, [100, 200, 300, 400, 500]
-    assert.deepEqual Query.bases.cache["""path:[[500,400,300,100,200],0]"""].ids, [100, 200, 300, 400, 500]
-
-  it "model tree", ->
-    assert.deepEqual Query.bases.hash[500].nodes(0).ids,                     [500]
-    assert.deepEqual Query.bases.hash[500].nodes(1).ids,                [400, 500]
-    assert.deepEqual Query.bases.hash[500].nodes(2).ids, [100,           400, 500]
-    assert.deepEqual Query.bases.hash[500].nodes(3).ids, [100, 200, 300, 400, 500]
+    assert.deepEqual Query.bases.cache["""path:[[500],3]"""    ].ids, [200, 300]
+    assert.deepEqual Query.bases.cache["""path:[[400,300],2]"""].ids, [200, 300]
+    assert.deepEqual Query.bases.cache["""path:[[100,300],1]"""].ids, [200, 300]
+    assert.deepEqual Query.bases.cache["""path:[[200,300],0]"""].ids, [200, 300]
 
   it "complex case", ->
-    assert.deepEqual Query.bases.hash[500].nodes(1).in(tag_ids: "b").ids, [500]
+    assert.deepEqual Query.bases.hash[500].nodes(3).in(tag_ids: "b").ids, [200]
