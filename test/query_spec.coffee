@@ -69,6 +69,11 @@ describe "Query", ()->
     assert.deepEqual Query.q_objs.where("data.msg": /Merge/).pluck("_id"), ["newnews", "news"]
     assert.deepEqual Query.q_objs.where("data.options.1": "cdefg").pluck("_id"), ["newnews", "news"]
 
+  it "where selection with _id", ->
+    assert.deepEqual Query.q_objs.where(_id: []).pluck("_id"), []
+    assert.deepEqual Query.q_objs.where(_id: [100,  20]).pluck("_id"), [20, 100]
+    assert.deepEqual Query.q_objs.where(_id: [100, 110]).pluck("_id"), [100]
+
   it "where selection for Array (same SQL IN)", ->
     assert.deepEqual Query.q_objs.where(key: ["C","A"]).pluck("_id"), ["newnews", "news", 100]
 

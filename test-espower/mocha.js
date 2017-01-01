@@ -584,6 +584,17 @@
         "data.options.1": "cdefg"
       }).pluck("_id"), ["newnews", "news"]);
     });
+    it("where selection with _id", function() {
+      assert.deepEqual(Query.q_objs.where({
+        _id: []
+      }).pluck("_id"), []);
+      assert.deepEqual(Query.q_objs.where({
+        _id: [100, 20]
+      }).pluck("_id"), [20, 100]);
+      return assert.deepEqual(Query.q_objs.where({
+        _id: [100, 110]
+      }).pluck("_id"), [100]);
+    });
     it("where selection for Array (same SQL IN)", function() {
       return assert.deepEqual(Query.q_objs.where({
         key: ["C", "A"]

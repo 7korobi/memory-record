@@ -17,6 +17,7 @@ each = (from, process)->
   return
 
 validate = (item, chklist)->
+  return false unless item and chklist
   for chk in chklist when ! chk item
     return false
   true
@@ -176,6 +177,7 @@ class Mem.Base.Finder
     query._list =
       for id in query._all_ids ? Object.keys all
         o = all[id]
+        continue unless o
         continue unless validate o.item, query._filters
         deploy id, o
 

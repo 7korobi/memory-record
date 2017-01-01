@@ -1,6 +1,6 @@
 /**
  memory-record - activerecord like in-memory data manager
- @version v0.3.0
+ @version v0.3.1
  @link https://github.com/7korobi/memory-record
  @license 
 **/
@@ -118,6 +118,9 @@
 
   validate = function(item, chklist) {
     var chk, i, len;
+    if (!(item && chklist)) {
+      return false;
+    }
     for (i = 0, len = chklist.length; i < len; i++) {
       chk = chklist[i];
       if (!chk(item)) {
@@ -374,6 +377,9 @@
         for (i = 0, len = ref1.length; i < len; i++) {
           id = ref1[i];
           o = all[id];
+          if (!o) {
+            continue;
+          }
           if (!validate(o.item, query._filters)) {
             continue;
           }
